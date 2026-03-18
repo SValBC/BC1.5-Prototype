@@ -1,0 +1,2701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuildCrew.AI – V1.5 Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Figtree', 'sans-serif'] } } }
+    }
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Figtree', sans-serif; background: white; transition: background 0.2s; }
+
+    /* Map – light */
+    .map-bg { background: #e9efe4; position: relative; overflow: hidden; }
+    .map-bg::before { content: ''; position: absolute; inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.55) 0, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 36px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.55) 0, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 52px); }
+    .map-road { position: absolute; background: white; }
+    /* Map – dark (mirrors Google Maps night style) */
+    .map-bg.dark-map { background: #1c2331; }
+    .map-bg.dark-map::before { background-image:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 36px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 52px); }
+    .map-bg.dark-map .map-road { background: #2c3a50; }
+    .map-bg.dark-map .map-park  { background: rgba(30,60,30,0.55) !important; }
+    .map-bg.dark-map .map-label { color: #8899aa !important; }
+
+    /* Skeleton shimmer */
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    body.dark .skeleton { background: linear-gradient(90deg, #2e2d39 25%, #3a3947 50%, #2e2d39 75%);
+      background-size: 200% 100%; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Progress bar */
+    .progress-anim { animation: prog 4s ease-out forwards; }
+    @keyframes prog { 0%{width:0} 40%{width:55%} 70%{width:78%} 85%{width:88%} 100%{width:95%} }
+
+    /* Row hover */
+    .trow:hover { background: #fafafa !important; }
+    .trow:hover .del-btn { opacity: 1 !important; }
+    body.dark .trow:hover { background: #2e2d39 !important; }
+
+    /* Cody gradient button */
+    .cody-btn { background: linear-gradient(87deg, #ffbd15 13%, #f4550b 51%, #b600e9 115%); }
+
+    /* Checkbox accent */
+    input[type="checkbox"] { accent-color: #e84600; cursor: pointer; }
+
+    /* Accordion chevron */
+    .chev-open { transform: rotate(180deg); transition: transform 0.2s; }
+    .chev-closed { transform: rotate(0deg); transition: transform 0.2s; }
+
+    /* ── Skill loading screen animations ── */
+    @keyframes sceneBar   { from{width:0} to{width:100%} }
+    @keyframes robotPulse { 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.07) rotate(2deg)} }
+    @keyframes scanBeam   { 0%{left:-25%;opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{left:115%;opacity:0} }
+    @keyframes floatUp    { 0%{transform:translateY(0);opacity:0.9} 100%{transform:translateY(-220px);opacity:0} }
+    @keyframes orbitA     { from{transform:rotate(0deg)   translateX(90px) rotate(0deg)}   to{transform:rotate(360deg)  translateX(90px)  rotate(-360deg)} }
+    @keyframes orbitB     { from{transform:rotate(120deg) translateX(70px) rotate(-120deg)} to{transform:rotate(480deg) translateX(70px)  rotate(-480deg)} }
+    @keyframes orbitC     { from{transform:rotate(240deg) translateX(110px) rotate(-240deg)} to{transform:rotate(600deg) translateX(110px) rotate(-600deg)} }
+    @keyframes blink      { 0%,85%,100%{opacity:1} 90%,95%{opacity:0.05} }
+    @keyframes sceneFade  { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+    @keyframes craneSwing { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+    @keyframes radarPing  { 0%{transform:scale(0.3);opacity:1} 100%{transform:scale(2.2);opacity:0} }
+    @keyframes tapeDraw   { from{width:0} to{width:100%} }
+    @keyframes spinSlow   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    @keyframes flagWave   { 0%,100%{transform:skewX(-2deg)} 50%{transform:skewX(6deg)} }
+    @keyframes numFly     { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(0.4);opacity:0} }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(39,38,53,0.15); border-radius: 3px; }
+    body.dark ::-webkit-scrollbar-thumb { background: rgba(253,253,253,0.15); }
+
+    /* Skills cards — stack vertically below 1440px */
+    .skills-row { display: flex; gap: 24px; }
+    @media (max-width: 1440px) { .skills-row { flex-direction: column; } }
+
+    /* Centered app container */
+    #root { display: flex; justify-content: center; }
+    .app-wrap { width: 100%; max-width: 2400px; min-height: 100vh; position: relative; }
+    /* Full-bleed bars: background spans viewport, inner content stays within 2400px */
+    .bar-fullbleed { width: 100vw; margin-left: calc(50% - 50vw); }
+    .bar-inner { max-width: 2400px; margin: 0 auto; padding: 0 80px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useContext, createContext } = React;
+
+    /* ────────────────────────────────────────────
+       DESIGN TOKENS – LIGHT
+    ──────────────────────────────────────────── */
+    const C = {
+      brand:  '#e84600',
+      nav:    '#272635',
+      page:   'white',
+      text:   '#272635',
+      sub:    '#474747',
+      muted:  'rgba(39,38,53,0.4)',
+      link:   '#5047f3',
+      teal:   '#48c1b5',
+      border: 'rgba(39,38,53,0.1)',
+      bord25: 'rgba(39,38,53,0.25)',
+      card:   '#fdfdfd',
+      row:    '#fafafa',
+    };
+
+    /* ────────────────────────────────────────────
+       DESIGN TOKENS – DARK
+    ──────────────────────────────────────────── */
+    const D = {
+      brand:  '#e84600',
+      nav:    '#272635',
+      page:   '#23222e',
+      text:   '#fdfdfd',
+      sub:    '#a7a7a7',
+      muted:  'rgba(253,253,253,0.35)',
+      link:   '#7b74f5',
+      teal:   '#48c1b5',
+      border: '#2e2d39',
+      bord25: '#474753',
+      card:   '#272635',
+      row:    '#2e2d39',
+    };
+
+    /* ────────────────────────────────────────────
+       THEME CONTEXT
+    ──────────────────────────────────────────── */
+    const ThemeCtx = createContext({ isDark: false, toggleDark: () => {}, bidDivision: null, setBidDivision: () => {} });
+
+    /* ────────────────────────────────────────────
+       ICONS (inline SVG helpers)
+    ──────────────────────────────────────────── */
+    const Icon = {
+      back: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="m19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+      ),
+      search: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      ),
+      sort: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{opacity:0.3}}>
+          <path d="M8 9l4-4 4 4M16 15l-4 4-4-4"/>
+        </svg>
+      ),
+      chevron: (open) => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          className={open ? 'chev-open' : 'chev-closed'}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      ),
+      download: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      ),
+      moon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      ),
+      sun: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      ),
+      dots: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      ),
+      x: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>
+        </svg>
+      ),
+      cody: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+          <path d="m12 2-2 5.5L4.5 9l5.5 2L12 17l2-5.5 5.5-2L14 7.5 12 2z"/>
+          <path d="m19 15-1 3-3 1 3 1 1 3 1-3 3-1-3-1-1-3z"/>
+        </svg>
+      ),
+    };
+
+    /* ────────────────────────────────────────────
+       LOGO
+    ──────────────────────────────────────────── */
+    function Logo() {
+      return (
+        <svg width="134" height="32" viewBox="0 0 503 121" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g clipPath="url(#bclogo-clip)">
+            <path d="M166.8 70.98C166.8 77.49 161.86 83.75 153.57 83.75H135.08V38.41H152.12C159.62 38.41 164.36 42.88 164.36 49.99C164.36 53.94 162.91 57.95 158.64 59.6C163.97 60.78 166.8 66.05 166.8 70.98ZM152.07 43.93H141.08V57.29H152.27C156.35 57.29 158.39 54.46 158.39 50.58C158.39 46.7 156.22 43.93 152.07 43.93ZM152.33 78.21C157.92 78.21 160.82 74.66 160.82 70.45C160.82 66.24 158.19 62.55 152.66 62.55H141.08V78.21H152.33Z" fill="white"/>
+            <path d="M197.01 53.01H202.73V83.74H197.01V78.94C195.17 82.82 190.23 84.53 186.81 84.53C179.11 84.53 174.37 79.4 174.44 70.78V53.01H180.16V70.64C180.16 75.84 183.25 79.13 187.53 79.13C191.81 79.13 196.94 76.56 197.01 69.92V53.01Z" fill="white"/>
+            <path d="M211.49 41.69C211.49 39.52 213.33 37.87 215.5 37.87C217.67 37.87 219.58 39.51 219.58 41.69C219.58 43.87 217.74 45.51 215.5 45.51C213.26 45.51 211.49 43.87 211.49 41.69ZM212.67 83.74V53.01H218.39V83.74H212.67Z" fill="white"/>
+            <path d="M228.33 83.74V36.3H234.06V83.74H228.33Z" fill="white"/>
+            <path d="M268.28 36.3H274.01V83.74H268.28V78.94C266.24 82.43 261.77 84.53 257.36 84.53C248.94 84.53 241.96 78.02 241.96 68.34C241.96 58.66 248.87 52.22 257.29 52.22C261.9 52.22 266.24 54.19 268.28 57.81V36.29V36.3ZM268.28 68.28C268.28 61.63 262.88 57.62 257.82 57.62C252.23 57.62 247.75 62.09 247.75 68.28C247.75 74.47 252.22 79.14 257.82 79.14C263.42 79.14 268.28 74.86 268.28 68.28Z" fill="white"/>
+            <path d="M282.16 61.17C282.16 48.34 292.36 37.61 305.19 37.61C312.17 37.61 318.22 40.57 322.23 45.31L317.89 49C314.86 45.45 310.26 43.14 305.19 43.14C295.65 43.14 288.15 51.43 288.15 61.17C288.15 70.91 295.65 79 305.19 79C310.26 79 314.86 76.7 317.89 73.14L322.23 76.83C318.22 81.57 312.16 84.53 305.19 84.53C292.36 84.53 282.16 74 282.16 61.17Z" fill="white"/>
+            <path d="M349.08 53.41L348.16 58.81C346.52 58.02 344.87 57.76 343.69 57.76C337.57 57.76 335.14 64.41 335.14 72.5V83.75H329.35V53.02H335.14V59.99C336.72 54.59 339.68 52.23 343.76 52.23C345.93 52.23 348.17 52.82 349.09 53.41H349.08Z" fill="white"/>
+            <path d="M382.64 70.84H357.64C358.5 76.3 362.44 79.13 367.71 79.13C371.46 79.13 374.88 77.42 376.66 74.33L381.6 76.3C378.97 81.63 373.44 84.52 367.52 84.52C358.77 84.52 351.73 78.01 351.73 68.27C351.73 58.53 358.77 52.22 367.52 52.22C376.27 52.22 382.79 58.54 382.79 68.27C382.79 69.13 382.72 69.98 382.66 70.84H382.64ZM377.05 65.91C376.33 60.65 372.58 57.62 367.51 57.62C362.44 57.62 358.63 60.38 357.71 65.91H377.05Z" fill="white"/>
+            <path d="M429.23 53.01H435.42L423.97 83.74H419.17L410.68 60.91L402.52 83.74H397.78L386.07 53.01H392.26L400.09 74.86L407.92 53.01H413.51L421.41 74.86L429.24 53.01H429.23Z" fill="white"/>
+            <path d="M437.33 80.45C437.33 78.08 439.24 76.37 441.47 76.37C443.7 76.37 445.75 78.08 445.75 80.45C445.75 82.82 443.78 84.4 441.47 84.4C439.16 84.4 437.33 82.76 437.33 80.45Z" fill="white"/>
+            <path d="M484.31 83.74L479.9 72.09H460.42L456.01 83.74H449.76L467 38.4H473.32L490.56 83.74H484.31ZM462.4 66.83H477.93L470.17 46.23L462.41 66.83H462.4Z" fill="white"/>
+            <path d="M497.01 83.74V38.4H503V83.74H497.01Z" fill="white"/>
+            <path d="M9.07 70.89V52V46.97L24.75 37.57V28.61V18.67L16.24 23.63L0 33.11V52V70.89V89.13L31.5 107.5V87.95L9.07 75.26V70.89Z" fill="#E84600"/>
+            <path d="M39.17 87.92V107.98V112.12L54 120.62L68.83 112.12V107.98V87.92L54 78.72L39.17 87.92Z" fill="#E84600"/>
+            <path d="M50.68 55.12L28.98 43.4L16.67 50.9V70.61L34.94 81.25L50.68 71.96V55.12Z" fill="#E84600"/>
+            <path d="M75.58 35.94V31.53V14.63V13.93L54 0.849976L32.42 13.93V14.63V31.53V35.94L54 47.79L75.58 35.94Z" fill="#E84600"/>
+            <path d="M91.76 23.63L83.25 18.67V28.61V37.57L98.93 46.97V52V70.89V75.26L76.5 87.95V107.5L108 89.13V70.89V52V33.11L91.76 23.63Z" fill="#E84600"/>
+            <path d="M91.3299 50.9L79.0199 43.4L57.3199 55.12V71.96L73.0599 81.25L91.3299 70.61V50.9Z" fill="#E84600"/>
+            <path d="M75.58 13.93V14.63V31.53V35.94L54 47.79V31.53V14.7V0.849976L75.58 13.93Z" fill="#BB2609"/>
+            <path d="M98.93 75.26V70.89V52V46.97L83.25 37.57V28.61V18.67L91.76 23.63L108 33.11V52V70.89V89.13L76.5 107.5V87.95L98.93 75.26Z" fill="#BB2609"/>
+            <path d="M68.83 87.92V107.98V112.12L54 120.62V107.98V78.72L68.83 87.92Z" fill="#BB2609"/>
+            <path d="M91.3299 50.9L79.0199 43.4L57.3199 55.12V71.96L73.0599 81.25L91.3299 70.61V50.9Z" fill="#BB2609"/>
+          </g>
+          <defs>
+            <clipPath id="bclogo-clip">
+              <rect width="503" height="119.77" fill="white" transform="translate(0 0.849976)"/>
+            </clipPath>
+          </defs>
+        </svg>
+      );
+    }
+
+    /* ────────────────────────────────────────────
+       NAV BAR
+    ──────────────────────────────────────────── */
+    function NavBar({ navigate }) {
+      const { isDark, toggleDark } = useContext(ThemeCtx);
+      return (
+        <div className="bar-fullbleed" style={{background: C.nav}}>
+        <div className="bar-inner flex items-center h-[64px]">
+          <div className="cursor-pointer" onClick={() => navigate('projects')}><Logo /></div>
+          <div className="flex flex-1 h-full items-center px-[10px]">
+            <div
+              className="flex h-full items-center px-[10px] cursor-pointer border-b-2"
+              style={{borderColor: 'white'}}
+              onClick={() => navigate('projects')}>
+              <span style={{color: 'white', fontSize:16, fontWeight:500}}>Projects</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDark}
+              style={{
+                color: isDark ? 'white' : 'rgba(255,255,255,0.6)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', padding: 4,
+                borderRadius: 4, transition: 'color 0.15s',
+              }}>
+              {isDark ? Icon.sun : Icon.moon}
+            </button>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-medium"
+              style={{background:'#5a5969', color:'#f9f9f9'}}>JW</div>
+          </div>
+        </div>
+        </div>
+      );
+    }
+
+    /* ────────────────────────────────────────────
+       BREADCRUMB BAR
+    ──────────────────────────────────────────── */
+    function Crumbs({ items, right }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      return (
+        <div className="bar-fullbleed border-b" style={{background: isDark ? '#23222E' : T.card, borderColor: T.border}}>
+          <div className="bar-inner flex items-center h-[60px]">
+            <div className="flex flex-1 items-center gap-2 h-full">
+              {items.map((item, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span style={{color: T.sub, fontSize:16}}>{'>'}</span>}
+                  <div className={`flex items-center py-[10px] ${item.onClick ? 'cursor-pointer hover:underline' : ''}`}
+                    onClick={item.onClick}>
+                    <span style={{color: T.sub, fontSize:16}}>{item.label}</span>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+            {right}
+          </div>
+        </div>
+      );
+    }
+
+    /* ────────────────────────────────────────────
+       BUTTON
+    ──────────────────────────────────────────── */
+    function Btn({ children, variant='primary', onClick, sm, className='' }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const base = `flex items-center justify-center gap-1 rounded-[8px] font-bold cursor-pointer ${sm ? 'px-4 py-[6px] text-[13px]' : 'px-6 py-[8px] text-[15px]'} ${className}`;
+      const styles = {
+        primary:   {background: T.brand, color: 'white', border: 'none',                   ...(sm ? {} : {minWidth: 200})},
+        secondary: {background: T.card,  color: T.text,  border: `1px solid ${T.bord25}`,  ...(sm ? {} : {minWidth: 200})},
+        ghost:     {background: T.card,  color: T.text,  border: `1px solid ${T.bord25}`,  ...(sm ? {} : {minWidth: 200})},
+      };
+      return <button className={base} style={styles[variant]} onClick={onClick}>{children}</button>;
+    }
+
+    /* ────────────────────────────────────────────
+       TABS
+    ──────────────────────────────────────────── */
+    function Tabs({ tabs, active, onChange }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      return (
+        <div className="flex gap-6 border-b" style={{borderColor: T.border}}>
+          {tabs.map(t => (
+            <button key={t} onClick={() => onChange(t)} className="flex flex-col gap-4 items-start">
+              <span style={{color: t === active ? T.brand : T.text, fontSize:16, fontWeight:600}}>{t}</span>
+              <div style={{height:2, background: t === active ? T.brand : 'transparent',
+                width:'100%', marginBottom:-1, borderRadius:1}} />
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    /* ────────────────────────────────────────────
+       SKILL LOADING SCREEN (animated scenes)
+    ──────────────────────────────────────────── */
+    const ROM_SCENES = [
+      {
+        duration: 4000,
+        bg: 'linear-gradient(145deg, #0f0e1a 0%, #1a1035 50%, #0e1a2a 100%)',
+        accentColor: '#5047f3',
+        emoji: '🤖',
+        headline: 'Blueprint Recon',
+        caption: 'Decoding your drawings faster than any intern ever could.',
+        tag: 'Analyzing documents…',
+        anim: 'scan',
+      },
+      {
+        duration: 4000,
+        bg: 'linear-gradient(145deg, #0a1a12 0%, #0f2a1a 50%, #0a1820 100%)',
+        accentColor: '#48c1b5',
+        emoji: '🏗️',
+        headline: 'Quantity Takeoff',
+        caption: 'Every cubic yard of concrete and every light fixture — counted, priced, and accounted for.',
+        tag: 'Running takeoffs…',
+        anim: 'crane',
+      },
+      {
+        duration: 3500,
+        bg: 'linear-gradient(145deg, #1a0e0a 0%, #2a1505 50%, #1a0f0a 100%)',
+        accentColor: '#e84600',
+        emoji: '💰',
+        headline: 'Market Pricing',
+        caption: 'Pulling 2026 Chicago metro rates. The estimate is almost yours.',
+        tag: 'Applying cost data…',
+        anim: 'orbit',
+      },
+    ];
+
+    const RFI_SCENES = [
+      {
+        duration: 4000,
+        bg: 'linear-gradient(145deg, #0a0f1a 0%, #10183a 50%, #0a1018 100%)',
+        accentColor: '#5047f3',
+        emoji: '🔍',
+        headline: 'Document Ingestion',
+        caption: "Our AI just read every page of your project documents. Please don't ask how.",
+        tag: 'Reading project documents…',
+        anim: 'radar',
+      },
+      {
+        duration: 4000,
+        bg: 'linear-gradient(145deg, #1a0a0a 0%, #2a1010 50%, #1a0e10 100%)',
+        accentColor: '#dc2626',
+        emoji: '🚩',
+        headline: 'Issue Detection',
+        caption: 'Flagging every missing spec, document conflict, and code question.',
+        tag: 'Identifying conflicts…',
+        anim: 'flags',
+      },
+      {
+        duration: 3500,
+        bg: 'linear-gradient(145deg, #0a140a 0%, #102010 50%, #0a1814 100%)',
+        accentColor: '#48c1b5',
+        emoji: '📋',
+        headline: 'RFI Assembly',
+        caption: 'Organizing issues by priority. Your report is almost ready.',
+        tag: 'Compiling RFIs…',
+        anim: 'tape',
+      },
+    ];
+
+    function SkillLoadingScreen({ scenes, destination, navigate }) {
+      const [idx, setIdx] = useState(0);
+      const scene = scenes[idx];
+
+      useEffect(() => {
+        const t = setTimeout(() => {
+          if (idx < scenes.length - 1) setIdx(i => i + 1);
+          else navigate(destination);
+        }, scene.duration);
+        return () => clearTimeout(t);
+      }, [idx]);
+
+      /* ── per-anim visual ── */
+      const Visual = () => {
+        const ac = scene.accentColor;
+
+        if (scene.anim === 'scan') return (
+          <div style={{position:'relative', width:280, height:200}}>
+            {/* Blueprint grid */}
+            <div style={{position:'absolute', inset:0, borderRadius:12, overflow:'hidden',
+              border:`1px solid ${ac}33`,
+              backgroundImage:`repeating-linear-gradient(0deg,${ac}18 0,${ac}18 1px,transparent 1px,transparent 28px),repeating-linear-gradient(90deg,${ac}18 0,${ac}18 1px,transparent 1px,transparent 40px)`,
+              backgroundColor:'rgba(80,71,243,0.04)'}}>
+              {/* Scan beam */}
+              <div style={{position:'absolute', top:0, bottom:0, width:'18%',
+                background:`linear-gradient(90deg, transparent, ${ac}55, ${ac}99, ${ac}55, transparent)`,
+                animation:'scanBeam 2s ease-in-out infinite'}}/>
+              {/* Blueprint marks */}
+              {[[20,30],[60,70],[140,50],[200,130],[100,150],[240,80]].map(([x,y],i)=>(
+                <div key={i} style={{position:'absolute', left:x, top:y, width:16, height:16,
+                  border:`1.5px solid ${ac}88`, borderRadius:2,
+                  opacity: 0.4 + (i%3)*0.2}}/>
+              ))}
+            </div>
+            {/* Robot */}
+            <div style={{position:'absolute', bottom:-20, right:-20, fontSize:72,
+              animation:'robotPulse 2s ease-in-out infinite',
+              filter:`drop-shadow(0 0 20px ${ac}88)`}}>🤖</div>
+          </div>
+        );
+
+        if (scene.anim === 'crane') return (
+          <div style={{position:'relative', width:260, height:220}}>
+            {/* Ground */}
+            <div style={{position:'absolute', bottom:0, left:0, right:0, height:3, background:`${ac}55`, borderRadius:2}}/>
+            {/* Building blocks */}
+            {[{w:60,h:100,l:20,color:`${ac}33`},{w:50,h:70,l:90,color:`${ac}22`},{w:70,h:120,l:150,color:`${ac}44`}].map((b,i)=>(
+              <div key={i} style={{position:'absolute', bottom:3, left:b.l, width:b.w, height:b.h,
+                background:b.color, border:`1px solid ${ac}55`, borderRadius:'4px 4px 0 0'}}/>
+            ))}
+            {/* Crane tower */}
+            <div style={{position:'absolute', bottom:3, right:20, width:6, height:180, background:`${ac}66`}}/>
+            {/* Crane arm */}
+            <div style={{position:'absolute', top:22, right:10, transformOrigin:'right center',
+              animation:'craneSwing 3s ease-in-out infinite'}}>
+              <div style={{width:160, height:4, background:`${ac}88`, borderRadius:2, marginLeft:-154}}/>
+              {/* Cable */}
+              <div style={{position:'absolute', left:20, top:4, width:2, height:40, background:`${ac}66`}}/>
+              <div style={{position:'absolute', left:14, top:44, fontSize:18}}>📦</div>
+            </div>
+            {/* Floating numbers */}
+            {[{t:'1,200 CY',x:30,delay:'0s'},{t:'$185/CY',x:110,delay:'0.7s'},{t:'Div 03',x:60,delay:'1.4s'}].map((n,i)=>(
+              <div key={i} style={{position:'absolute', bottom:80, left:n.x,
+                fontSize:11, fontWeight:700, color:ac, opacity:0,
+                animation:`floatUp 2.5s ease-out ${n.delay} infinite`}}>{n.t}</div>
+            ))}
+          </div>
+        );
+
+        if (scene.anim === 'orbit') return (
+          <div style={{position:'relative', width:220, height:220, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            {/* Center dollar */}
+            <div style={{fontSize:56, zIndex:2, animation:'robotPulse 1.8s ease-in-out infinite',
+              filter:`drop-shadow(0 0 24px ${ac}cc)`}}>💰</div>
+            {/* Orbit rings */}
+            {[90,120,150].map((r,i)=>(
+              <div key={i} style={{position:'absolute', width:r*2, height:r*2, borderRadius:'50%',
+                border:`1px solid ${ac}${i===0?'55':'33'}`, top:'50%', left:'50%', transform:'translate(-50%,-50%)'}}/>
+            ))}
+            {/* Orbiting dots with construction items */}
+            {[{a:'orbitA',icon:'📐',size:22},{a:'orbitB',icon:'🔩',size:18},{a:'orbitC',icon:'📊',size:20}].map((o,i)=>(
+              <div key={i} style={{position:'absolute', top:'50%', left:'50%', marginTop:-11, marginLeft:-11,
+                animation:`${o.a} ${3+i*0.7}s linear infinite`, fontSize:o.size}}>{o.icon}</div>
+            ))}
+          </div>
+        );
+
+        if (scene.anim === 'radar') return (
+          <div style={{position:'relative', width:220, height:220, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            {/* Radar rings */}
+            {[0,0.6,1.2].map((delay,i)=>(
+              <div key={i} style={{position:'absolute', width:180, height:180, borderRadius:'50%',
+                border:`2px solid ${ac}`,
+                animation:`radarPing 2.4s ease-out ${delay}s infinite`}}/>
+            ))}
+            {/* Center */}
+            <div style={{fontSize:52, zIndex:2, animation:'robotPulse 2s ease-in-out infinite',
+              filter:`drop-shadow(0 0 18px ${ac}aa)`}}>🔍</div>
+            {/* Sweep line */}
+            <div style={{position:'absolute', top:'50%', left:'50%', width:90, height:2, transformOrigin:'left center',
+              background:`linear-gradient(90deg, ${ac}, ${ac}00)`,
+              animation:'spinSlow 2.5s linear infinite'}}/>
+            {/* Document dots */}
+            {[[30,40],[160,50],[50,150],[170,140],[100,20],[100,180]].map(([x,y],i)=>(
+              <div key={i} style={{position:'absolute', left:x, top:y, width:6, height:6,
+                borderRadius:'50%', background:ac, opacity:0.5+i*0.1}}/>
+            ))}
+          </div>
+        );
+
+        if (scene.anim === 'flags') return (
+          <div style={{position:'relative', width:280, height:210}}>
+            {/* Document base */}
+            <div style={{position:'absolute', left:40, top:20, width:200, height:170,
+              background:'rgba(255,255,255,0.04)', border:`1px solid ${ac}33`, borderRadius:8}}>
+              {/* Lines of text */}
+              {[30,55,80,105,130,155].map((t,i)=>(
+                <div key={i} style={{position:'absolute', top:t, left:16, right:16, height:3,
+                  background:`rgba(255,255,255,${0.07+(i%2)*0.04})`, borderRadius:2}}/>
+              ))}
+            </div>
+            {/* Flags popping up */}
+            {[
+              {left:100,top:28,delay:'0.2s'},{left:160,top:63,delay:'0.9s'},
+              {left:80,top:98,delay:'1.5s'},{left:200,top:118,delay:'0.5s'},
+            ].map((f,i)=>(
+              <div key={i} style={{position:'absolute', left:f.left, top:f.top,
+                animation:`robotPulse 1.8s ease-in-out ${f.delay} infinite`,
+                filter:`drop-shadow(0 0 8px ${ac})`}}>
+                <div style={{fontSize:18, animation:`flagWave 1.2s ease-in-out infinite`}}>🚩</div>
+              </div>
+            ))}
+            {/* Alert pings */}
+            {[{l:108,t:34},{l:168,t:69},{l:88,t:104}].map((p,i)=>(
+              <div key={i} style={{position:'absolute', left:p.l, top:p.t, width:20, height:20,
+                borderRadius:'50%', border:`1.5px solid ${ac}`,
+                animation:`radarPing 2s ease-out ${i*0.5}s infinite`}}/>
+            ))}
+          </div>
+        );
+
+        if (scene.anim === 'tape') return (
+          <div style={{position:'relative', width:260, height:200}}>
+            {/* Clipboard */}
+            <div style={{position:'absolute', left:30, top:0, width:200, height:190,
+              background:'rgba(255,255,255,0.04)', border:`1px solid ${ac}44`, borderRadius:8}}>
+              <div style={{position:'absolute', top:-8, left:'50%', transform:'translateX(-50%)',
+                width:50, height:16, background:`${ac}66`, borderRadius:4}}/>
+              {/* Checklist rows */}
+              {[
+                {done:true,label:'Missing Info RFIs'},
+                {done:true,label:'Code Compliance'},
+                {done:true,label:'Document Conflicts'},
+                {done:false,label:'Qualifications'},
+                {done:false,label:'Areas of Concern'},
+              ].map((row,i)=>(
+                <div key={i} style={{position:'absolute', top:30+i*32, left:12, right:12,
+                  display:'flex', alignItems:'center', gap:8}}>
+                  <div style={{width:14, height:14, borderRadius:3,
+                    background: row.done ? ac : 'transparent',
+                    border: `2px solid ${row.done ? ac : ac+'55'}`,
+                    flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    {row.done && <div style={{width:6, height:6, borderRadius:1, background:'white'}}/>}
+                  </div>
+                  <div style={{height:3, background: row.done ? `${ac}88` : `${ac}33`, borderRadius:2,
+                    flex:1, overflow:'hidden'}}>
+                    {row.done && <div style={{height:'100%', background:ac, animation:'tapeDraw 0.6s ease forwards'}}/>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Pencil */}
+            <div style={{position:'absolute', right:0, bottom:20, fontSize:36,
+              animation:'craneSwing 2s ease-in-out infinite',
+              filter:`drop-shadow(0 0 12px ${ac}88)`}}>✏️</div>
+          </div>
+        );
+
+        return <div style={{fontSize:72}}>{scene.emoji}</div>;
+      };
+
+      return (
+        <div key={idx} style={{
+          minHeight:'100vh', display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center',
+          background: scene.bg, position:'relative', overflow:'hidden',
+          animation:'sceneFade 0.45s ease',
+        }}>
+
+          {/* Background ambient glow */}
+          <div style={{position:'absolute', top:'20%', left:'50%', transform:'translateX(-50%)',
+            width:500, height:500, borderRadius:'50%',
+            background:`radial-gradient(circle, ${scene.accentColor}0e 0%, transparent 70%)`,
+            pointerEvents:'none'}}/>
+
+          {/* Scene counter top-right */}
+          <div style={{position:'absolute', top:32, right:40,
+            fontSize:12, fontWeight:600, letterSpacing:'0.08em', color:'rgba(255,255,255,0.35)'}}>
+            {idx+1} / {scenes.length}
+          </div>
+
+          {/* Tag pill */}
+          <div style={{fontSize:12, fontWeight:600, letterSpacing:'0.06em',
+            color: scene.accentColor, background:`${scene.accentColor}18`,
+            border:`1px solid ${scene.accentColor}44`,
+            padding:'5px 14px', borderRadius:20, marginBottom:32, textTransform:'uppercase'}}>
+            {scene.tag}
+          </div>
+
+          {/* Central visual */}
+          <div style={{marginBottom:36}}>
+            <Visual/>
+          </div>
+
+          {/* Text */}
+          <div style={{textAlign:'center', maxWidth:480, padding:'0 24px'}}>
+            <h2 style={{fontSize:28, fontWeight:700, color:'#fff', margin:'0 0 10px', letterSpacing:'-0.02em'}}>
+              {scene.headline}
+            </h2>
+            <p style={{fontSize:15, lineHeight:'24px', color:'rgba(255,255,255,0.55)', margin:0}}>
+              {scene.caption}
+            </p>
+          </div>
+
+          {/* Scene progress bar */}
+          <div style={{position:'absolute', bottom:0, left:0, right:0, height:3,
+            background:'rgba(255,255,255,0.08)'}}>
+            <div key={`bar-${idx}`} style={{
+              height:'100%', background: scene.accentColor,
+              animation:`sceneBar ${scene.duration}ms linear forwards`,
+            }}/>
+          </div>
+
+          {/* Scene dots */}
+          <div style={{position:'absolute', bottom:16, left:'50%', transform:'translateX(-50%)',
+            display:'flex', gap:6}}>
+            {scenes.map((_,i) => (
+              <div key={i} style={{width: i===idx ? 20 : 6, height:6, borderRadius:3,
+                background: i===idx ? scene.accentColor : 'rgba(255,255,255,0.2)',
+                transition:'all 0.3s'}}/>
+            ))}
+          </div>
+
+        </div>
+      );
+    }
+
+    function ROMLoadingScreen({ navigate }) {
+      return <SkillLoadingScreen scenes={ROM_SCENES} destination="rom" navigate={navigate}/>;
+    }
+
+    function RFILoadingScreen({ navigate }) {
+      return <SkillLoadingScreen scenes={RFI_SCENES} destination="rfi" navigate={navigate}/>;
+    }
+
+    /* ────────────────────────────────────────────
+       MAP PLACEHOLDER
+    ──────────────────────────────────────────── */
+    function MapView() {
+      const { isDark } = useContext(ThemeCtx);
+      return (
+        <div className={`map-bg w-full h-full relative${isDark ? ' dark-map' : ''}`} style={{minHeight:240}}>
+          <div className="map-road" style={{top:'28%',left:0,right:0,height:6}}/>
+          <div className="map-road" style={{top:'54%',left:0,right:0,height:4}}/>
+          <div className="map-road" style={{top:'72%',left:0,right:0,height:3}}/>
+          <div className="map-road" style={{left:'22%',top:0,bottom:0,width:5}}/>
+          <div className="map-road" style={{left:'52%',top:0,bottom:0,width:4}}/>
+          <div className="map-road" style={{left:'74%',top:0,bottom:0,width:3}}/>
+          <div className="map-park rounded absolute" style={{left:'4%',top:'58%',width:'16%',height:'32%',background:'rgba(90,160,90,0.25)'}}/>
+          <div className="absolute" style={{left:'51%', top:'46%', transform:'translate(-50%,-100%)'}}>
+            <div style={{width:14,height:14,borderRadius:'50%',background:C.brand,border:'2.5px solid white',boxShadow:'0 1px 4px rgba(0,0,0,0.3)'}}/>
+          </div>
+          <span className="map-label" style={{position:'absolute',left:'24%',top:'30%',fontSize:9,color:'#555',fontWeight:500}}>Broadway Ave</span>
+          <span className="map-label" style={{position:'absolute',left:'54%',top:'36%',fontSize:9,color:'#888',writingMode:'vertical-lr'}}>Michigan Ave</span>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 1: PROJECTS
+    ────────────────────────────────────────────────────────────────── */
+    const PROJECTS = [
+      { id:1, name:'Recreational and Wellness Center', code:'Project Alpha', addr:'448 Broadway Ave., Chicago, IL, 60605', client:'DPR Construction', date:'Nov 28, 2025' },
+      { id:2, name:'UCCS Cybersecurity and Space Ecosystem Expansion', code:'Project Alpha', addr:'448 Broadway Ave., Chicago, IL, 60605', client:'—', date:'Nov 28, 2025' },
+      { id:3, name:'Demo project', code:'—', addr:'448 Broadway Ave., Chicago, IL, 60605', client:'—', date:'Nov 28, 2025' },
+    ];
+
+    function ProjectsScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [q, setQ] = useState('');
+      const [hover, setHover] = useState(null);
+      const [sortK, setSortK] = useState(null);
+      const [sortD2, setSortD2] = useState('asc');
+
+      const list = PROJECTS.filter(p =>
+        !q || p.name.toLowerCase().includes(q.toLowerCase()) || p.code.toLowerCase().includes(q.toLowerCase())
+      );
+
+      const cols = [
+        {label:'Name',         key:'name'},
+        {label:'Codename',     key:'code'},
+        {label:'Address',      key:'addr'},
+        {label:'Client',       key:'client'},
+        {label:'Date Created', key:'date'},
+      ];
+
+      function handleSort(k) {
+        if (sortK === k) setSortD2(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortK(k); setSortD2('asc'); }
+      }
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate} />
+          <Crumbs items={[{label:'Projects'}]} />
+
+          <div className="px-[80px] pt-[32px] pb-1">
+            <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Projects</h1>
+          </div>
+
+          <div className="flex items-center px-[80px] py-2 gap-6">
+            <div className="flex flex-1 items-center gap-6">
+              <div className="flex flex-col w-[425px]" style={{borderBottom:`1px solid ${T.bord25}`}}>
+                <div className="flex items-center justify-between pb-1">
+                  <input
+                    value={q} onChange={e => setQ(e.target.value)}
+                    placeholder="Search projects"
+                    className="flex-1 outline-none bg-transparent"
+                    style={{fontSize:16, color: q ? T.text : T.muted}}
+                  />
+                  <span style={{color:T.muted}}>{Icon.search}</span>
+                </div>
+              </div>
+              <span style={{fontSize:15, color:T.text}}>{list.length}/{PROJECTS.length} projects</span>
+            </div>
+            <Btn onClick={() => navigate('upload')}>New project</Btn>
+          </div>
+
+          <div className="px-[80px] pt-6 pb-16">
+            <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+              <div className="flex gap-6 items-center pl-6 pr-3 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                {cols.map(c => (
+                  <button key={c.key} onClick={() => handleSort(c.key)}
+                    className="flex flex-1 items-center gap-1 cursor-pointer text-left">
+                    <span style={{fontSize:13, fontWeight:700, color:T.text}}>{c.label}</span>
+                    {Icon.sort}
+                  </button>
+                ))}
+                <div style={{width:24}}/>
+              </div>
+              {list.map(p => (
+                <div key={p.id} className="trow flex gap-6 items-center pl-6 pr-3 py-3 border-b"
+                  style={{borderColor:T.border, background: T.page}}
+                  onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}>
+                  <button onClick={() => navigate('projectHome')}
+                    className="flex-1 text-left truncate underline"
+                    style={{fontSize:15, color:T.link, background:'none', border:'none', cursor:'pointer', padding:0}}>
+                    {p.name}
+                  </button>
+                  <span className="flex-1 truncate" style={{fontSize:15, color:T.text}}>{p.code}</span>
+                  <span className="flex-1 truncate" style={{fontSize:15, color:T.sub}}>{p.addr}</span>
+                  <span className="flex-1 truncate" style={{fontSize:15, color:T.sub, minWidth:180}}>{p.client}</span>
+                  <span className="flex-1" style={{fontSize:15, color:T.sub, minWidth:180}}>{p.date}</span>
+                  <button className="del-btn flex items-center justify-center"
+                    style={{width:24, opacity: hover === p.id ? 1 : 0, transition:'opacity 0.15s',
+                      background:'none', border:'none', cursor:'pointer', color:T.text}}>
+                    {Icon.x}
+                  </button>
+                </div>
+              ))}
+              {list.length === 0 && (
+                <div className="flex items-center justify-center py-16"
+                  style={{fontSize:15, color:T.muted, background: T.page}}>No projects match your search.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 2: UPLOAD FILES
+    ────────────────────────────────────────────────────────────────── */
+    const BADGES = [
+      {ext:'.docx', bg:'rgba(39,38,53,0.2)',    color:'#272635'},
+      {ext:'.pdf',  bg:'rgba(186,56,0,0.2)',    color:'#ba3800'},
+      {ext:'.jpg',  bg:'rgba(71,149,243,0.2)',  color:'#4795f3'},
+      {ext:'.jpeg', bg:'rgba(71,149,243,0.2)',  color:'#4795f3'},
+      {ext:'.png',  bg:'rgba(71,149,243,0.2)',  color:'#4795f3'},
+      {ext:'.xlsx', bg:'rgba(72,193,181,0.2)',  color:'#48c1b5'},
+      {ext:'.csv',  bg:'rgba(72,193,181,0.2)',  color:'#48c1b5'},
+      {ext:'.xer',  bg:'rgba(80,71,243,0.2)',   color:'#5047f3'},
+    ];
+
+    const ZONES = [
+      {title:'Drawings',         desc:'Drawings and floorplans of your project.',                                   emoji:'🏗'},
+      {title:'Specs',            desc:'Project specifications and technical documentation.',                        emoji:'📋'},
+      {title:'ITB/RFP/Bid Form', desc:'Invitation to Bid, Request for Proposal, and Bid Form documents.',          emoji:'📊'},
+      {title:'Supporting docs',  desc:"Any other supporting files that don't fit into the other three categories.", emoji:'📄'},
+    ];
+
+    function DropZone({ title, desc, emoji }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [drag, setDrag] = useState(false);
+      const [count, setCount] = useState(0);
+      return (
+        <div
+          className="flex flex-col gap-6 p-6 relative overflow-hidden cursor-pointer"
+          style={{
+            flex:'1 1 calc(50% - 5px)', minWidth:280, height:200,
+            borderRadius:24,
+            background: drag ? 'rgba(232,70,0,0.04)' : T.card,
+            border: `1px solid ${drag ? T.brand : T.bord25}`,
+            transition:'border-color 0.15s, background 0.15s',
+          }}
+          onDragOver={e => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={e => { e.preventDefault(); setDrag(false); setCount(c => c + e.dataTransfer.files.length); }}
+          onClick={() => setCount(c => c + 1)}
+        >
+          <div style={{position:'absolute', right:-16, top:4, fontSize:120, opacity:0.04, lineHeight:1, pointerEvents:'none'}}>
+            {emoji}
+          </div>
+          <div className="flex flex-col gap-2 relative" style={{zIndex:1}}>
+            <span style={{fontSize:20, fontWeight:700, color:T.text}}>{title}</span>
+            <span style={{fontSize:16, color:T.sub}}>{desc}</span>
+            {count > 0 && (
+              <span style={{fontSize:13, fontWeight:600, color:T.brand}}>
+                {count} file{count > 1 ? 's' : ''} added
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function UploadScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate} />
+          <Crumbs
+            items={[
+              {label:'Projects', onClick:() => navigate('projects')},
+              {label:'New Project'},
+              {label:'Upload Files'},
+            ]}
+            right={
+              <button className="cody-btn flex items-center gap-2 text-white font-bold rounded-[40px] border border-white/20 shadow-md"
+                style={{padding:'8px 20px', fontSize:15}}>
+                Ask Cody {Icon.cody}
+              </button>
+            }
+          />
+
+          <div style={{padding:'32px 32px 36px'}}>
+            <div className="flex items-center gap-3 mb-3">
+              <button onClick={() => navigate('projects')} className="flex items-center justify-center rounded-full"
+                style={{width:36, height:36, color:T.text, background:'none', border:'none', cursor:'pointer'}}>
+                {Icon.back}
+              </button>
+              <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Upload Files</h1>
+            </div>
+            <div style={{paddingLeft:48}}>
+              <p style={{fontSize:16, color:T.sub, marginBottom:10}}>
+                Drag and drop your project files in the corresponding sections. Your interns will then read and analyze the contents to help you get started faster.
+              </p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <span style={{fontSize:15, color:T.muted}}>Compatible with</span>
+                {BADGES.map(b => (
+                  <span key={b.ext} style={{fontSize:14, padding:'2px 8px', borderRadius:4, background:b.bg, color:b.color}}>
+                    {b.ext}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{padding:'0 80px 48px'}}>
+            <div className="flex flex-wrap gap-[10px]">
+              {ZONES.map(z => <DropZone key={z.title} {...z} />)}
+            </div>
+            <div className="flex gap-[10px] items-center" style={{paddingTop:48}}>
+              <Btn variant="secondary" onClick={() => navigate('projects')}>Cancel</Btn>
+              <Btn onClick={() => navigate('loading')}>I'm done. Let's continue!</Btn>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 3: LOADING (auto-advance)
+    ────────────────────────────────────────────────────────────────── */
+    function LoadingScreen({ navigate }) {
+      useEffect(() => {
+        const t = setTimeout(() => navigate('projectHome'), 3800);
+        return () => clearTimeout(t);
+      }, []);
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen fade-in" style={{background:C.nav}}>
+          <div className="text-center" style={{maxWidth:480, padding:'0 32px'}}>
+            <div className="flex justify-center mb-8"><Logo /></div>
+            <h2 style={{fontSize:28, fontWeight:700, color:'white', marginBottom:12}}>Setting Up Your Project</h2>
+            <p style={{fontSize:16, color:'rgba(255,255,255,0.55)', marginBottom:40}}>
+              Your interns are reading and analyzing your files. This usually takes less than a minute.
+            </p>
+            <div style={{background:'rgba(255,255,255,0.15)', borderRadius:4, height:4, overflow:'hidden', marginBottom:12}}>
+              <div className="progress-anim" style={{height:'100%', background:C.brand, borderRadius:4}}/>
+            </div>
+            <p style={{fontSize:14, color:'rgba(255,255,255,0.35)'}}>Analyzing drawings…</p>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 4: PROJECT HOME
+    ────────────────────────────────────────────────────────────────── */
+    function SkillCard({ title, desc, icon, onClick }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      return (
+        <div
+          className="relative flex flex-col gap-5 overflow-hidden cursor-pointer flex-1"
+          style={{
+            background: T.card, border:`1px solid ${T.bord25}`,
+            borderRadius:20, padding:'32px 40px',
+            transition:'box-shadow 0.15s',
+          }}
+          onClick={onClick}
+          onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
+        >
+          <div style={{position:'absolute', right:0, top:-14, fontSize:200, opacity:0.025, pointerEvents:'none', lineHeight:1}}>{icon}</div>
+          <div className="flex items-start gap-3 relative" style={{zIndex:1}}>
+            <div style={{fontSize:28, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>{icon}</div>
+            <div className="flex-1 flex flex-col gap-2" style={{paddingTop:2}}>
+              <span style={{fontSize:18, fontWeight:600, color:T.text}}>{title}</span>
+              <span style={{fontSize:15, lineHeight:'18px', color:T.sub}}>{desc}</span>
+            </div>
+          </div>
+          <div style={{zIndex:1, position:'relative', paddingLeft:48}}><Btn variant="primary">Run</Btn></div>
+        </div>
+      );
+    }
+
+    const FILES_DATA = [
+      {name:'BC_survey.tif',             type:'Drawing',     pages:20, size:'13.12', date:'Aug 11 2025'},
+      {name:'bc_schedules and 2025.xlsx', type:'Spreadsheet', pages:15, size:'12.85', date:'Aug 11 2025'},
+      {name:'catreport',                 type:'Drawing',     pages:24, size:'14.52', date:'Oct 2 2025'},
+      {name:'demolitions',               type:'Specs',       pages:11, size:'2.84',  date:'Aug 11 2025'},
+      {name:'Plans',                     type:'Export File', pages:10, size:'14.58', date:'Jun 11 2025'},
+    ];
+
+    const BIDS = [
+      { id:1, div:'26', trade:'Electrical',  company:'Ewing Electric Co.',        dateRun:'Dec 15, 2025', status:'Won',         captain:'Sarah Chen'  },
+      { id:2, div:'22', trade:'Plumbing',    company:'Summit Mechanical',         dateRun:'Jan 8, 2026',  status:'Submitted',   captain:'Marcus Webb' },
+      { id:3, div:'03', trade:'Concrete',    company:'Apex Concrete Group',       dateRun:'Feb 20, 2026', status:'In Progress', captain:''            },
+      { id:4, div:'23', trade:'HVAC',        company:'ThermalTech Solutions',     dateRun:'Mar 5, 2026',  status:'New',         captain:''            },
+      { id:5, div:'05', trade:'Steel',       company:'Ironside Structural Inc.',  dateRun:'Nov 2, 2025',  status:'No Bid',      captain:'Devon Park'  },
+    ];
+
+    const LABOR_TRADES_DEFAULT = [
+      { trade:'Concrete',           rate:95,  budgeted:480 },
+      { trade:'Carpentry',          rate:78,  budgeted:320 },
+      { trade:'Electrical',         rate:115, budgeted:640 },
+      { trade:'Plumbing',           rate:108, budgeted:280 },
+      { trade:'HVAC',               rate:125, budgeted:520 },
+      { trade:'Finishes',           rate:68,  budgeted:960 },
+      { trade:'Steel / Structural', rate:142, budgeted:200 },
+      { trade:'Earthwork',          rate:85,  budgeted:160 },
+    ];
+
+    const BID_STATUS_STYLE = {
+      'New':         { bg:'rgba(80,71,243,0.12)',  color:'#5047f3' },
+      'In Progress': { bg:'rgba(245,173,35,0.15)', color:'#c98a00' },
+      'Submitted':   { bg:'rgba(72,193,181,0.15)', color:'#2a9a90' },
+      'Won':         { bg:'rgba(34,160,100,0.15)', color:'#1a8a50' },
+      'No Bid':      { bg:'rgba(180,50,50,0.12)',  color:'#b43232' },
+    };
+    const BID_STATUS_OPTIONS = ['New','In Progress','Submitted','Won','No Bid'];
+
+    function ProjectHomeScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [tab, setTab] = useState('Home');
+      const [showMenu, setShowMenu] = useState(false);
+      const [editing, setEditing] = useState(false);
+      const [fields, setFields] = useState({
+        projectName: 'Recreational and Wellness Center',
+        codename:    'Project Alpha',
+        address:     '448 Broadway Ave., Chicago, IL, 60605',
+        client:      'DPR Construction',
+        status:      'Active',
+      });
+      const [draft, setDraft] = useState(fields);
+
+      // Bid Tracker state
+      const [bidFilter, setBidFilter] = useState('All');
+      const [fileFilter, setFileFilter] = useState('All');
+      const [bidCaptains, setBidCaptains] = useState(() =>
+        Object.fromEntries(BIDS.map(b => [b.id, b.captain]))
+      );
+      const [bidStatuses, setBidStatuses] = useState(() =>
+        Object.fromEntries(BIDS.map(b => [b.id, b.status]))
+      );
+
+      // Labor rates state
+      const [laborRows, setLaborRows]   = useState(LABOR_TRADES_DEFAULT);
+      const [laborFile, setLaborFile]   = useState('labor_rates_Q4_2025.xlsx');
+      const [laborSaved, setLaborSaved] = useState(false);
+      const [laborDragging, setLaborDragging] = useState(false);
+
+      function updateLabor(i, field, raw) {
+        const val = parseFloat(raw) || 0;
+        setLaborRows(rows => rows.map((r,idx) => idx===i ? {...r, [field]: val} : r));
+        setLaborSaved(false);
+        clearTimeout(window._laborTimer);
+        window._laborTimer = setTimeout(() => setLaborSaved(true), 800);
+      }
+
+      function startEdit() { setDraft(fields); setEditing(true); setShowMenu(false); }
+      function saveEdit()   { setFields(draft); setEditing(false); }
+      function cancelEdit() { setEditing(false); }
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}
+          onClick={() => setShowMenu(false)}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects', onClick:() => navigate('projects')},
+            {label:'Project Alpha'},
+          ]}/>
+
+          <div className="flex items-start px-[80px] pt-8">
+            <div className="flex flex-1 flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>{fields.codename}</h1>
+                <span style={{fontSize:14, padding:'2px 8px', borderRadius:4,
+                  background: isDark ? 'rgba(155,255,245,0.2)' : 'rgba(72,193,181,0.15)',
+                  color:T.teal}}>{fields.status}</span>
+              </div>
+              <span style={{fontSize:18, color:T.sub}}>{fields.projectName}</span>
+              <span style={{fontSize:14, color:T.muted}}>Last updated on Oct 23, 2025 14:39</span>
+            </div>
+          </div>
+
+          <div className="px-[80px] pt-8">
+            <Tabs tabs={['Home', 'Files & Documents', 'Bid Tracker', 'Labor Rates']} active={tab} onChange={setTab}/>
+          </div>
+
+          {tab === 'Home' && <>
+            <div className="px-[80px] pt-6">
+              <div className="rounded-[16px] border overflow-hidden" style={{borderColor:T.bord25}}>
+
+                {/* Card header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b" style={{background:T.card, borderColor:T.bord25}}>
+                  <span style={{fontSize:18, fontWeight:700, color:T.text}}>Project Information</span>
+                  {editing ? (
+                    <div className="flex items-center gap-2">
+                      <Btn sm variant="secondary" onClick={cancelEdit}>Cancel</Btn>
+                      <Btn sm onClick={saveEdit}>Save changes</Btn>
+                    </div>
+                  ) : (
+                    <div style={{position:'relative'}}>
+                      <button
+                        style={{color:T.text, background:'none', border:'none', cursor:'pointer', display:'flex', padding:4, borderRadius:4}}
+                        onClick={e => { e.stopPropagation(); setShowMenu(m => !m); }}>
+                        {Icon.dots}
+                      </button>
+                      {showMenu && (
+                        <div style={{
+                          position:'absolute', right:0, top:'calc(100% + 4px)', zIndex:100, minWidth:220,
+                          background: T.card, border:`1px solid ${T.bord25}`,
+                          borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', overflow:'hidden',
+                        }} onClick={e => e.stopPropagation()}>
+                          <button
+                            className="flex items-center gap-3 w-full px-4 py-3 text-left"
+                            style={{background:'none', border:'none', cursor:'pointer', color:T.text, fontSize:15, width:'100%'}}
+                            onMouseEnter={e => e.currentTarget.style.background = isDark ? '#2e2d39' : '#f5f5f5'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            onClick={startEdit}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            Edit project information
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Card body */}
+                <div className="flex" style={{background:T.card}}>
+                  <div className="border-r shrink-0" style={{width:380, borderColor:T.bord25}}>
+                    <MapView/>
+                  </div>
+                  <div className="flex flex-1 px-6">
+                    <div className="flex flex-col gap-6 py-6 flex-1">
+                      {editing ? (
+                        [{label:'Project Name', key:'projectName'},
+                         {label:'Codename',     key:'codename'},
+                         {label:'Address',      key:'address'},
+                         {label:'Client',       key:'client'}].map(f => (
+                          <div key={f.key} className="flex flex-col gap-1" style={{fontSize:16}}>
+                            <span style={{fontWeight:700, color:T.text, marginBottom:2}}>{f.label}</span>
+                            <input
+                              value={draft[f.key]}
+                              onChange={e => setDraft(d => ({...d, [f.key]: e.target.value}))}
+                              style={{
+                                fontSize:15, color:T.text,
+                                background: isDark ? 'rgba(255,255,255,0.05)' : '#f7f7f7',
+                                border:`1px solid ${T.bord25}`, borderRadius:6,
+                                padding:'7px 10px', outline:'none', width:'100%',
+                              }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        [{label:'Project Name', value:fields.projectName, link:false},
+                         {label:'Codename',     value:fields.codename,    link:false},
+                         {label:'Address',      value:fields.address,     link:true},
+                         {label:'Client',       value:fields.client,      link:false}].map(f => (
+                          <div key={f.label} className="flex flex-col gap-1" style={{fontSize:16}}>
+                            <span style={{fontWeight:700, color:T.text}}>{f.label}</span>
+                            <span style={{color: f.link ? T.link : T.text,
+                              textDecoration: f.link ? 'underline' : 'none',
+                              cursor: f.link ? 'pointer' : 'default'}}>
+                              {f.value}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="flex flex-col py-6 pl-8 flex-1">
+                      <div className="flex flex-col gap-1" style={{fontSize:16}}>
+                        <span style={{fontWeight:700, color:T.text}}>Status</span>
+                        {editing ? (
+                          <select
+                            value={draft.status}
+                            onChange={e => setDraft(d => ({...d, status: e.target.value}))}
+                            style={{
+                              fontSize:15, color:T.text,
+                              background: isDark ? 'rgba(255,255,255,0.05)' : '#f7f7f7',
+                              border:`1px solid ${T.bord25}`, borderRadius:6,
+                              padding:'7px 10px', outline:'none', cursor:'pointer',
+                            }}>
+                            <option>Active</option>
+                            <option>On hold</option>
+                            <option>Completed</option>
+                            <option>Archived</option>
+                          </select>
+                        ) : (
+                          <span style={{color:T.teal}}>{fields.status}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-[80px] py-12 flex flex-col gap-4">
+              <h2 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Skills</h2>
+              <div className="skills-row">
+                <SkillCard
+                  icon="🧮" title="Rough Order of Magnitude"
+                  desc="Utilize our Comprehension Estimation Manager to analyze your project's drawings and/or specs to give you a quick, detailed estimate on your project."
+                  onClick={() => navigate('romLoading')}
+                />
+                <SkillCard icon="📊" title="Bid Leveling"
+                  desc="Our Bid Leveling Analyst tool compares and normalizes bids from multiple contractors or suppliers side by side."
+                  onClick={() => navigate('bidDivision')}
+                />
+                <SkillCard icon="✏️" title="Request for Information"
+                  desc="Utilize our Document Quality Assurance Analyst to highlight inconsistencies or missing information in your project's documentation."
+                  onClick={() => navigate('rfiLoading')}
+                />
+              </div>
+            </div>
+          </>}
+
+          {tab === 'Files & Documents' && (
+            <div className="px-[80px] py-8">
+              <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                <div className="flex items-center justify-between px-6 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                  <div className="flex items-center gap-2" style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:8, padding:'4px 6px'}}>
+                    {['All', 'Drawings', 'Specs', 'Bidding', 'Other'].map(f => (
+                      <button key={f}
+                        onClick={() => setFileFilter(f)}
+                        style={{
+                          fontSize:14, fontWeight: fileFilter===f ? 600 : 400,
+                          color: fileFilter===f ? T.text : T.sub,
+                          background: fileFilter===f ? (isDark ? '#3c3b4a' : '#fff') : 'none',
+                          border:'none', cursor:'pointer', borderRadius:6,
+                          padding:'5px 14px',
+                          boxShadow: fileFilter===f ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                          transition:'all 0.15s',
+                        }}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  <Btn sm variant="secondary">Upload File</Btn>
+                </div>
+                <div className="flex gap-4 px-6 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                  {['File Name','Type','Pages','Size','Date'].map((h,i) => (
+                    <span key={h} className={i===0 ? 'flex-1' : 'w-[100px]'}
+                      style={{fontSize:13, fontWeight:700, color:T.text}}>{h}</span>
+                  ))}
+                </div>
+                {FILES_DATA.map((f,i) => (
+                  <div key={i} className="trow flex gap-4 px-6 py-3 border-b items-center" style={{borderColor:T.border, background: T.page}}>
+                    <span className="flex-1 truncate" style={{fontSize:15, color:T.text}}>{f.name}</span>
+                    <span style={{width:100, fontSize:15, color:T.sub}}>{f.type}</span>
+                    <span style={{width:100, fontSize:15, color:T.sub}}>{f.pages}</span>
+                    <span style={{width:100, fontSize:15, color:T.sub}}>{f.size} MB</span>
+                    <span style={{width:100, fontSize:15, color:T.sub}}>{f.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── BID TRACKER ── */}
+          {tab === 'Bid Tracker' && (
+            <div className="px-[80px] py-8 flex flex-col gap-6">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2" style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:8, padding:'4px 6px'}}>
+                  {['All','Active','Recent'].map(f => (
+                    <button key={f}
+                      onClick={() => setBidFilter(f)}
+                      style={{
+                        fontSize:14, fontWeight: bidFilter===f ? 600 : 400,
+                        color: bidFilter===f ? T.text : T.sub,
+                        background: bidFilter===f ? (isDark ? '#3c3b4a' : '#fff') : 'none',
+                        border:'none', cursor:'pointer', borderRadius:6,
+                        padding:'5px 14px',
+                        boxShadow: bidFilter===f ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                        transition:'all 0.15s',
+                      }}>
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="rounded-[10px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                {/* Column headers */}
+                <div className="flex items-center px-5 py-3 border-b" style={{background:T.card, borderColor:T.bord25}}>
+                  {[
+                    {label:'Division',    w:90},
+                    {label:'Trade',       flex:true},
+                    {label:'Company',     flex:true},
+                    {label:'Date Run',    w:120},
+                    {label:'Status',      hug:true},
+                    {label:'Bid Captain', w:200},
+                  ].map(h => (
+                    <span key={h.label}
+                      style={{fontSize:13, fontWeight:700, color:T.text,
+                        flex:   h.flex ? '1 1 0' : (h.hug ? '0 0 auto' : 'none'),
+                        width:  h.w || 'auto',
+                        minWidth: h.w || (h.hug ? 0 : 'auto'),
+                        paddingRight: h.hug ? 20 : 0,
+                      }}>
+                      {h.label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Rows */}
+                {BIDS.filter(b => {
+                  const st = bidStatuses[b.id];
+                  if (bidFilter === 'Active')  return ['New','In Progress','Submitted'].includes(st);
+                  if (bidFilter === 'Recent')  return ['Won','No Bid'].includes(st);
+                  return true;
+                }).map(b => (
+                  <div key={b.id} className="trow flex items-center px-5 py-4 border-b"
+                    style={{borderColor:T.border, background:T.page}}>
+                    {/* Division */}
+                    <span style={{width:90, minWidth:90, flexShrink:0, fontSize:13, fontWeight:600, color:T.muted}}>
+                      Div. {b.div}
+                    </span>
+                    {/* Trade */}
+                    <span className="flex-1 truncate" style={{fontSize:15, fontWeight:600, color:T.text, paddingRight:16}}>
+                      {b.trade}
+                    </span>
+                    {/* Company */}
+                    <span className="flex-1 truncate" style={{fontSize:14, color:T.sub, paddingRight:16}}>{b.company}</span>
+                    {/* Date Run */}
+                    <span style={{width:120, minWidth:120, flexShrink:0, fontSize:14, color:T.sub}}>{b.dateRun}</span>
+                    {/* Status — hug width: chip sizes to content only */}
+                    <span style={{flexShrink:0, paddingRight:20}}>
+                      <select
+                        value={bidStatuses[b.id]}
+                        onChange={e => setBidStatuses(s => ({...s, [b.id]: e.target.value}))}
+                        style={{
+                          fontSize:12, fontWeight:600, textAlign:'center',
+                          padding:'3px 8px', borderRadius:20, border:'none',
+                          cursor:'pointer', outline:'none', appearance:'none',
+                          width:'auto', display:'inline-block',
+                          background: BID_STATUS_STYLE[bidStatuses[b.id]]?.bg,
+                          color:      BID_STATUS_STYLE[bidStatuses[b.id]]?.color,
+                        }}>
+                        {BID_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </span>
+                    <div style={{width:200, minWidth:200}}>
+                      {bidCaptains[b.id] ? (
+                        <div className="flex items-center gap-2">
+                          <div style={{
+                            width:28, height:28, borderRadius:'50%', background:T.brand,
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            fontSize:11, fontWeight:700, color:'#fff', flexShrink:0,
+                          }}>
+                            {bidCaptains[b.id].split(' ').map(w=>w[0]).join('')}
+                          </div>
+                          <span style={{fontSize:14, color:T.text}}>{bidCaptains[b.id]}</span>
+                          <button
+                            onClick={() => setBidCaptains(c => ({...c, [b.id]:''}))}
+                            style={{marginLeft:'auto', fontSize:11, color:T.sub, background:'none', border:'none', cursor:'pointer', opacity:0.6}}>
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <input
+                          placeholder="Assign captain…"
+                          defaultValue=""
+                          onBlur={e => {
+                            const v = e.target.value.trim();
+                            if (v) setBidCaptains(c => ({...c, [b.id]: v}));
+                          }}
+                          onKeyDown={e => {
+                            if (e.key==='Enter') {
+                              const v = e.target.value.trim();
+                              if (v) setBidCaptains(c => ({...c, [b.id]: v}));
+                            }
+                          }}
+                          style={{
+                            fontSize:14, color:T.text,
+                            background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
+                            border:`1px solid ${T.bord25}`, borderRadius:6,
+                            padding:'5px 10px', outline:'none', width:'100%',
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-6 mt-2">
+                {Object.entries(BID_STATUS_STYLE).map(([s, st]) => (
+                  <div key={s} className="flex items-center gap-2">
+                    <span style={{width:8, height:8, borderRadius:'50%', background:st.color, display:'inline-block'}}/>
+                    <span style={{fontSize:13, color:T.sub}}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── LABOR RATES ── */}
+          {tab === 'Labor Rates' && (
+            <div className="px-[80px] py-8 flex flex-col gap-6">
+
+              {/* Source file card */}
+              <div className="rounded-[10px] border p-5" style={{background:T.card, borderColor:T.bord25}}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div style={{
+                      width:42, height:42, borderRadius:8, flexShrink:0,
+                      background: isDark ? 'rgba(80,71,243,0.18)' : 'rgba(80,71,243,0.1)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.link} strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{fontSize:15, fontWeight:600, color:T.text}}>{laborFile}</div>
+                      <div style={{fontSize:13, color:T.sub}}>Source file · Last updated Mar 12, 2026</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label style={{
+                      fontSize:13, fontWeight:600, color:T.link,
+                      cursor:'pointer', padding:'6px 14px',
+                      border:`1px solid ${T.link}`, borderRadius:6,
+                      opacity:0.85,
+                    }}>
+                      Replace file
+                      <input type="file" accept=".pdf,.xlsx,.xls,.csv" style={{display:'none'}}
+                        onChange={e => { if (e.target.files[0]) setLaborFile(e.target.files[0].name); }}/>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Note */}
+              <div className="flex items-start gap-3 rounded-[8px] px-4 py-3"
+                style={{background: isDark ? 'rgba(80,71,243,0.12)' : 'rgba(80,71,243,0.07)', border:`1px solid ${isDark ? 'rgba(80,71,243,0.3)' : 'rgba(80,71,243,0.2)'}`}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.link} strokeWidth="2" style={{flexShrink:0, marginTop:1}}>
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{fontSize:13, color:T.link}}>
+                  Labor rates stored here are used by Skills — including Rough Order of Magnitude — to produce more accurate cost estimates for this project.
+                </span>
+              </div>
+
+              {/* Auto-save status */}
+              <div className="flex items-center justify-between">
+                <h2 style={{fontSize:16, fontWeight:700, color:T.text, margin:0}}>Rate matrix</h2>
+                <div style={{
+                  fontSize:13, color: laborSaved ? T.teal : T.sub,
+                  transition:'color 0.3s',
+                  display:'flex', alignItems:'center', gap:6,
+                }}>
+                  {laborSaved ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Saved
+                    </>
+                  ) : (
+                    <span style={{opacity:0.5}}>Edit any cell to save changes automatically</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Matrix table */}
+              <div className="rounded-[10px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                {/* Header */}
+                <div className="flex items-center px-5 py-3 border-b" style={{background:T.card, borderColor:T.bord25}}>
+                  {[
+                    {label:'Trade',           flex:1},
+                    {label:'Rate ($/hr)',      w:160},
+                    {label:'Budgeted Hours',   w:160},
+                    {label:'Cost',             w:180},
+                  ].map(h => (
+                    <span key={h.label} style={{
+                      fontSize:13, fontWeight:700, color:T.text,
+                      flex:h.flex||'none', width:h.w||'auto', minWidth:h.w||'auto',
+                    }}>{h.label}</span>
+                  ))}
+                </div>
+
+                {laborRows.map((row, i) => {
+                  const cost = row.rate * row.budgeted;
+                  return (
+                    <div key={row.trade} className="flex items-center px-5 py-3 border-b"
+                      style={{borderColor:T.border, background: T.page}}>
+                      <span className="flex-1" style={{fontSize:15, fontWeight:600, color:T.text}}>{row.trade}</span>
+                      <div style={{width:160, minWidth:160, paddingRight:16}}>
+                        <input
+                          type="number"
+                          value={row.rate === 0 ? '' : row.rate}
+                          onChange={e => updateLabor(i, 'rate', e.target.value)}
+                          style={{
+                            fontSize:14, color:T.text, width:'100%',
+                            background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
+                            border:`1px solid ${T.bord25}`, borderRadius:6,
+                            padding:'5px 10px', outline:'none',
+                          }}
+                        />
+                      </div>
+                      <div style={{width:160, minWidth:160, paddingRight:16}}>
+                        <input
+                          type="number"
+                          value={row.budgeted === 0 ? '' : row.budgeted}
+                          onChange={e => updateLabor(i, 'budgeted', e.target.value)}
+                          style={{
+                            fontSize:14, color:T.text, width:'100%',
+                            background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
+                            border:`1px solid ${T.bord25}`, borderRadius:6,
+                            padding:'5px 10px', outline:'none',
+                          }}
+                        />
+                      </div>
+                      <span style={{width:180, minWidth:180, fontSize:15, fontWeight:600, color:T.text}}>
+                        ${cost.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Totals row */}
+                <div className="flex items-center px-5 py-4"
+                  style={{background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderTop:`2px solid ${T.bord25}`}}>
+                  <span className="flex-1" style={{fontSize:15, fontWeight:700, color:T.text}}>Total</span>
+                  <span style={{width:160, minWidth:160, fontSize:13, color:T.sub}}>
+                    Avg ${Math.round(laborRows.reduce((s,r)=>s+r.rate,0)/laborRows.length)}/hr
+                  </span>
+                  <span style={{width:160, minWidth:160, fontSize:15, fontWeight:600, color:T.sub}}>
+                    {laborRows.reduce((s,r)=>s+r.budgeted,0).toLocaleString()} hrs
+                  </span>
+                  <span style={{width:180, minWidth:180, fontSize:16, fontWeight:700, color:T.brand}}>
+                    ${laborRows.reduce((s,r)=>s+(r.rate*r.budgeted),0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 5: ROM – Comprehensive Estimation Manager
+    ────────────────────────────────────────────────────────────────── */
+    const DIVS = [
+      'Division 02 - Existing conditions',
+      'Division 03 - Concrete',
+      'Division 06 - Wood, plastics and composites',
+      'Division 07 - Thermal and moisture protection',
+      'Division 08 - Openings',
+      'Division 09 - Finishes',
+      'Division 21 - Fire suppression',
+      'Division 22 - Plumbing',
+      'Division 23 - Heating, ventilating and air conditioning (HVAC)',
+      'Division 26 - Electrical',
+      'Division 31 - Earthwork',
+      'Division 32 - Exterior improvements',
+      'Division 33 - Utilities',
+    ];
+
+    const DIV_DETAIL = {
+      'Division 02 - Existing conditions': [
+        {code:'02 41 00', desc:'Demolition',               qty:'14,200', unit:'SF', cost:'$2.85',   total:'$40,470'},
+        {code:'02 41 13', desc:'Selective site demolition', qty:'8,500',  unit:'SF', cost:'$1.95',   total:'$16,575'},
+        {code:'02 82 13', desc:'Asbestos abatement',        qty:'2,400',  unit:'SF', cost:'$8.50',   total:'$20,400'},
+      ],
+      'Division 03 - Concrete': [
+        {code:'03 30 00', desc:'Cast-in-place concrete',       qty:'1,200', unit:'CY', cost:'$185.00', total:'$222,000'},
+        {code:'03 35 00', desc:'Concrete finishing',            qty:'24,000',unit:'SF', cost:'$3.25',   total:'$78,000'},
+        {code:'03 41 00', desc:'Precast structural concrete',   qty:'850',   unit:'CY', cost:'$420.00', total:'$357,000'},
+      ],
+      'Division 08 - Openings': [
+        {code:'08 11 13', desc:'Hollow metal doors & frames', qty:'42',    unit:'EA', cost:'$820.00', total:'$34,440'},
+        {code:'08 41 13', desc:'Aluminum-framed entrances',   qty:'6',     unit:'EA', cost:'$4,200',  total:'$25,200'},
+        {code:'08 80 00', desc:'Glazing',                     qty:'3,200', unit:'SF', cost:'$48.00',  total:'$153,600'},
+      ],
+      'Division 22 - Plumbing': [
+        {code:'22 11 00', desc:'Facility water distribution', qty:'1',  unit:'LS', cost:'$95,000', total:'$95,000'},
+        {code:'22 13 00', desc:'Facility sanitary sewerage',  qty:'1',  unit:'LS', cost:'$62,000', total:'$62,000'},
+        {code:'22 40 00', desc:'Plumbing fixtures',           qty:'86', unit:'EA', cost:'$650',    total:'$55,900'},
+      ],
+    };
+
+    function DivRow({ div }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [open, setOpen] = useState(false);
+      const rows = DIV_DETAIL[div];
+      return (
+        <div className="border-b" style={{borderColor:T.border}}>
+          <div className="flex gap-5 items-center py-6 px-[80px] cursor-pointer"
+            style={{background: open ? T.row : T.page}}
+            onMouseEnter={e => { if (!open) e.currentTarget.style.background = T.row; }}
+            onMouseLeave={e => { if (!open) e.currentTarget.style.background = T.page; }}
+            onClick={() => setOpen(o => !o)}>
+            <span style={{color:T.text}}>{Icon.chevron(open)}</span>
+            <span className="flex-1" style={{fontSize:20, fontWeight:700, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+              {div}
+            </span>
+            <button style={{opacity:0.5, background:'none', border:'none', cursor:'pointer', color:T.text}}
+              onClick={e => e.stopPropagation()} title="Download">
+              {Icon.download}
+            </button>
+          </div>
+          {open && (
+            <div style={{padding:'0 80px 24px', paddingLeft:128}}>
+              {rows ? (
+                <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                  <div className="flex gap-4 px-4 py-2 border-b" style={{background: T.card, borderColor: T.border}}>
+                    {['Code','Description','Qty','Unit','Unit Cost','Total'].map((h,i) => (
+                      <span key={h} className={i===1 ? 'flex-1' : 'w-[90px]'}
+                        style={{fontSize:13, fontWeight:700, color:T.text}}>{h}</span>
+                    ))}
+                  </div>
+                  {rows.map((r,i) => (
+                    <div key={i} className="flex gap-4 px-4 py-3 border-b items-center"
+                      style={{borderColor:T.border, background: T.page}}>
+                      <span style={{width:90, fontSize:13, fontFamily:'monospace', color:T.sub}}>{r.code}</span>
+                      <span className="flex-1" style={{fontSize:15, color:T.text}}>{r.desc}</span>
+                      <span style={{width:90, fontSize:15, color:T.sub}}>{r.qty}</span>
+                      <span style={{width:90, fontSize:15, color:T.sub}}>{r.unit}</span>
+                      <span style={{width:90, fontSize:15, color:T.sub}}>{r.cost}</span>
+                      <span style={{width:90, fontSize:15, fontWeight:600, color:T.text}}>{r.total}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                  {[1,2,3].map(i => (
+                    <div key={i} className="flex gap-4 px-4 py-3 border-b items-center" style={{borderColor:T.border, background: T.page}}>
+                      <div className="skeleton rounded" style={{width:90, height:14}}/>
+                      <div className="skeleton rounded flex-1" style={{height:14}}/>
+                      <div className="skeleton rounded" style={{width:70, height:14}}/>
+                      <div className="skeleton rounded" style={{width:50, height:14}}/>
+                      <div className="skeleton rounded" style={{width:70, height:14}}/>
+                      <div className="skeleton rounded" style={{width:80, height:14}}/>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ROMScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [tab, setTab] = useState('Overview');
+      const [expandAll, setExpandAll] = useState(false);
+
+      const COST_CODES = [
+        {div:'Div 03',code:'03 30 00',desc:'Cast-in-place Concrete',       qty:'1,200 CY',  cost:'$185.00', total:'$222,000'},
+        {div:'Div 07',code:'07 21 13',desc:'Board Insulation',             qty:'18,000 SF', cost:'$3.20',   total:'$57,600'},
+        {div:'Div 08',code:'08 11 13',desc:'Hollow Metal Doors & Frames',  qty:'42 EA',     cost:'$820.00', total:'$34,440'},
+        {div:'Div 09',code:'09 29 00',desc:'Gypsum Board',                 qty:'62,000 SF', cost:'$2.45',   total:'$151,900'},
+        {div:'Div 22',code:'22 11 00',desc:'Facility Water Distribution',  qty:'1 LS',      cost:'$95,000', total:'$95,000'},
+        {div:'Div 23',code:'23 05 00',desc:'HVAC Systems',                 qty:'1 LS',      cost:'$420,000',total:'$420,000'},
+        {div:'Div 26',code:'26 05 00',desc:'Common Work – Electrical',     qty:'1 LS',      cost:'$380,000',total:'$380,000'},
+      ];
+
+      const KEY_HIGHLIGHTS = [
+        'Division 03 (Concrete) accounts for $222,000 of the estimate — standard for a structure of this type and size.',
+        'MEP scope (Divisions 22, 23, 26) totals $895,000, representing approximately 10.5% of the overall project cost.',
+        'Division 09 (Finishes) reflects a high-finish tenant improvement level consistent with public wellness facility standards.',
+        'Estimate is based on current Chicago metro market pricing as of Q1 2026. A 5% escalation contingency is recommended for bids received after June 2026.',
+        'Gross area of 62,000 SF yields a blended cost-per-SF of $137.00, which is within the expected range for this project type.',
+      ];
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects',     onClick:() => navigate('projects')},
+            {label:'Project Alpha',onClick:() => navigate('projectHome')},
+            {label:'Comprehensive Estimation Manager'},
+          ]}/>
+
+          <div style={{padding:'32px 32px 24px'}}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <button onClick={() => navigate('projectHome')} className="flex items-center justify-center rounded-full"
+                  style={{width:36,height:36,color:T.text,background:'none',border:'none',cursor:'pointer'}}>
+                  {Icon.back}
+                </button>
+                <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Comprehensive Estimation Manager</h1>
+              </div>
+              <div className="flex items-center gap-6">
+                <Btn variant="secondary">Re-run</Btn>
+                <button style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',
+                  background:'none',border:`1px solid ${T.bord25}`,borderRadius:8,cursor:'pointer',
+                  color:T.text,opacity:0.65}}>{Icon.download}</button>
+              </div>
+            </div>
+            <p style={{paddingLeft:48, fontSize:16, color:T.sub, margin:0, maxWidth:'90%', lineHeight:'24px'}}>
+              Delivers end-to-end estimation capabilities, from initial quantity takeoffs through materials selection, labor calculations, and scheduling to produce comprehensive project estimates. Integrates all estimating phases into a single, cohesive workflow for maximum efficiency.
+            </p>
+          </div>
+
+          <div className="px-[80px]">
+            <Tabs tabs={['Overview','Breakdown by Division']} active={tab} onChange={setTab}/>
+          </div>
+
+          {/* ══ OVERVIEW ══ */}
+          {tab === 'Overview' && (
+            <div style={{padding:'48px 80px 80px'}}>
+
+              {/* Stat cards */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                {[
+                  {label:'Total Estimate', value:'$8,493,560', sub:'All divisions combined'},
+                  {label:'Cost per SF',    value:'$137.00',    sub:'Blended average across all trades'},
+                  {label:'Gross Area',     value:'62,000 SF',  sub:'Building footprint'},
+                ].map(s => (
+                  <div key={s.label} className="rounded-[12px] border p-5" style={{borderColor:T.bord25, background:T.card}}>
+                    <div style={{fontSize:13, fontWeight:600, color:T.muted, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em'}}>{s.label}</div>
+                    <div style={{fontSize:32, fontWeight:700, color:T.text, marginBottom:4}}>{s.value}</div>
+                    <div style={{fontSize:13, color:T.muted}}>{s.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Project Summary + Key Highlights side by side */}
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                {/* Project Summary */}
+                <div className="rounded-[12px] border p-6" style={{borderColor:T.bord25, background:T.card}}>
+                  <h3 style={{fontSize:18, fontWeight:700, color:T.text, margin:'0 0 16px'}}>Project Summary</h3>
+                  <p style={{fontSize:15, lineHeight:'24px', color:T.sub, margin:'0 0 12px'}}>
+                    The Recreational and Wellness Center project involves the construction of a multi-purpose facility featuring aquatic amenities, fitness areas, and community spaces. Based on uploaded drawings and specifications, the comprehensive estimate reflects current market conditions in the Chicago metropolitan area.
+                  </p>
+                  <p style={{fontSize:15, lineHeight:'24px', color:T.sub, margin:0}}>
+                    This estimate was generated using the uploaded construction documents and incorporates quantity takeoffs from architectural, structural, MEP, and civil disciplines. All unit costs are sourced from RSMeans Q1 2026 data adjusted for the Chicago metro cost index of 1.12.
+                  </p>
+                </div>
+
+                {/* Key Highlights */}
+                <div className="rounded-[12px] border p-6" style={{borderColor:T.bord25, background:T.card}}>
+                  <h3 style={{fontSize:18, fontWeight:700, color:T.text, margin:'0 0 16px'}}>Key Highlights</h3>
+                  <ul style={{margin:0, padding:'0 0 0 20px', listStyleType:'disc', display:'flex', flexDirection:'column', gap:10}}>
+                    {KEY_HIGHLIGHTS.map((h,i) => (
+                      <li key={i} style={{fontSize:15, lineHeight:'22px', color:T.sub}}>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Cost Codes Table */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Cost Codes</h3>
+              </div>
+              <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                <div className="flex gap-4 px-4 py-3 border-b" style={{background:T.card, borderColor:T.border}}>
+                  {['Division','Code','Description','Qty','Unit Cost','Total',''].map((h,i) => (
+                    <span key={i} className={i===2 ? 'flex-1' : 'w-[110px]'}
+                      style={{fontSize:13, fontWeight:700, color:T.text}}>{h}</span>
+                  ))}
+                </div>
+                {COST_CODES.map((r,i) => (
+                  <div key={i} className="trow flex gap-4 items-center px-4 py-3 border-b" style={{borderColor:T.border, background:T.page}}>
+                    <span style={{width:110, fontSize:14, fontWeight:600, color:T.brand}}>{r.div}</span>
+                    <span style={{width:110, fontSize:13, fontFamily:'monospace', color:T.sub}}>{r.code}</span>
+                    <span className="flex-1" style={{fontSize:15, color:T.text}}>{r.desc}</span>
+                    <span style={{width:110, fontSize:15, color:T.sub}}>{r.qty}</span>
+                    <span style={{width:110, fontSize:15, color:T.sub}}>{r.cost}</span>
+                    <span style={{width:110, fontSize:15, fontWeight:600, color:T.text}}>{r.total}</span>
+                    <div style={{width:30}}>
+                      <button style={{opacity:0.4, background:'none', border:'none', cursor:'pointer', color:T.text}} title="Copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex gap-4 items-center px-4 py-4 border-t" style={{background:T.card, borderColor:T.border}}>
+                  <span style={{width:110}}/><span style={{width:110}}/>
+                  <span className="flex-1" style={{fontWeight:700, fontSize:15, color:T.text}}>Total</span>
+                  <span style={{width:110}}/><span style={{width:110}}/>
+                  <span style={{width:110, fontWeight:700, fontSize:16, color:T.brand}}>$8,493,560</span>
+                  <span style={{width:30}}/>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ══ BREAKDOWN BY DIVISION ══ */}
+          {tab === 'Breakdown by Division' && (
+            <div style={{paddingTop:48}}>
+              <div className="flex items-center px-[80px] pb-3">
+                <button className="flex items-center gap-2" style={{fontSize:15, color:T.text, background:'none', border:'none', cursor:'pointer'}}
+                  onClick={() => setExpandAll(e => !e)}>
+                  {Icon.chevron(expandAll)}
+                  <span>{expandAll ? 'Collapse All' : 'Expand All'}</span>
+                </button>
+              </div>
+              {DIVS.map(d => <DivRow key={d} div={d}/>)}
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 6: RFI – Document Quality Assurance Analyst
+    ────────────────────────────────────────────────────────────────── */
+    const RFI_TYPES = [
+      'RFI (Missing Information)',
+      'RFI (Code Compliance)',
+      'RFI (Document Conflict)',
+      'Qualification/Clarification',
+      'Non-RFI Area of Concern',
+    ];
+    const PRIORITY_STYLE = {
+      'Critical': { bg:'rgba(220,38,38,0.1)',   color:'#dc2626' },
+      'Normal':   { bg:'rgba(217,119,6,0.12)',  color:'#d97706' },
+      'Low':      { bg:'rgba(22,163,74,0.1)',   color:'#16a34a' },
+      'N/A':      { bg:'rgba(107,114,128,0.12)',color:'#6b7280' },
+    };
+    const PRIORITY_ORDER = ['Critical','Normal','Low','N/A'];
+    const IMPACT_OPTS = ['Yes','Potential','No','TBD'];
+
+    const RFIS_DEFAULT = [
+      { num:'001', type:'RFI (Missing Information)',  subj:'WH-01 Model Clarification',                     priority:'Critical', refs:'Sheet P.01, P.12; Spec Section 22 11 12',                   detail:'Sheet P.12 depicts a water heater (WH-01) installed in the janitor\'s closet. Sheet P.01 and Spec Section 22 11 12 do not provide a model number or basis of design. Please provide the desired BOD for accurate pricing.',                                                                                                                                                                              date:'Mar 17, 2026', cost:'Yes',       sched:'Potential', trades:'PL, GC'    },
+      { num:'002', type:'RFI (Document Conflict)',    subj:'Structural Steel Connection at Grid B-4',        priority:'Critical', refs:'Sheet S-201, S-301; Spec Section 05 12 00',                  detail:'Sheet S-301 shows a bolted moment connection at grid B-4 with (4) 7/8" A325 bolts. Sheet S-201 indicates a welded connection at the same location. Spec Section 05 12 00 does not resolve the conflict. Please clarify the required connection type and provide updated details.',                                                                                                                        date:'Mar 17, 2026', cost:'Yes',       sched:'Yes',       trades:'STL, GC'   },
+      { num:'003', type:'RFI (Code Compliance)',      subj:'Fire Rating at Corridor Walls – Building B',     priority:'Critical', refs:'Sheet A-201, A-202; Spec Section 07 84 13; IBC 708',         detail:'IBC Section 708 and Spec Section 07 84 13 require a 2-hour fire resistance rating for corridor separation walls. Sheet A-201 and A-202 indicate a single layer of 5/8" Type X gypsum which does not achieve the required assembly rating. Please issue revised wall type details or specify the correct UL-listed assembly.',                                                                             date:'Mar 17, 2026', cost:'Yes',       sched:'Potential', trades:'GC, CARP'  },
+      { num:'004', type:'RFI (Missing Information)',  subj:'Roof Drain Sizing and Overflow Requirements',    priority:'Normal',   refs:'Sheet P-301; Spec Section 22 14 23; IPC Table 1106.2',       detail:'Sheet P-301 shows roof drain locations but does not indicate drain sizing. Per IPC Table 1106.2 and local rainfall intensity (3.5 in/hr), primary drains require a 4" minimum diameter. Secondary overflow drains are also required but not shown. Please confirm drain sizing and provide overflow drain locations.',                                                                                      date:'Mar 17, 2026', cost:'Potential', sched:'No',        trades:'PL'        },
+      { num:'005', type:'RFI (Document Conflict)',    subj:'HVAC Diffuser Layout Conflict – Natatorium',     priority:'Normal',   refs:'Sheet M-301, M-302',                                          detail:'M-301 shows (3) 24×24 diffusers at 8\'-0" o.c. along column line 4 in the natatorium ceiling. M-302 shows (4) 24×24 diffusers at 6\'-0" o.c. at the same location. Please issue a coordinated reflected ceiling plan with final diffuser locations.',                                                                                                                                                   date:'Mar 17, 2026', cost:'Potential', sched:'No',        trades:'HVAC'      },
+      { num:'006', type:'RFI (Missing Information)',  subj:'Plumbing Rough-in Dimensions – Locker Room',     priority:'Normal',   refs:'Sheet P-101, A-301',                                          detail:'Floor drain and shower valve rough-in locations on P-101 conflict with the partition layout on A-301. Drain centerline dimensions on P-101 place units within 6" of partition centerlines, providing insufficient clearance. Please provide coordinated rough-in dimensions.',                                                                                                                             date:'Mar 17, 2026', cost:'No',        sched:'Potential', trades:'PL, GC'    },
+      { num:'007', type:'RFI (Missing Information)',  subj:'Pool Basin Waterproofing Membrane Specification', priority:'Low',     refs:'Spec Section 07 16 00',                                       detail:'Spec Section 07 16 00 references both a crystalline admixture (Xypex Concentrate) and a sheet membrane system (Carlisle CCW 700) without indicating which system applies at the pool basin walls and floor. Please confirm the specified system and applicable substrate requirements.',                                                                                                                    date:'Mar 17, 2026', cost:'Potential', sched:'No',        trades:'GC, CARP'  },
+      { num:'008', type:'Qualification/Clarification',subj:'Expansion Joint Locations at Building Corners',  priority:'Low',     refs:'Sheet S-101, S-102',                                          detail:'Structural drawings S-101 and S-102 do not indicate expansion joint locations at exterior building corners. For structures exceeding 200 LF, expansion joints are typically required per industry standard practice. Please confirm whether expansion joints are required and, if so, provide locations and details.',                                                                                        date:'Mar 17, 2026', cost:'Potential', sched:'No',        trades:'STL, GC'   },
+      { num:'009', type:'Non-RFI Area of Concern',   subj:'Site Utility Coordination – Municipal Authority', priority:'N/A',     refs:'Sheet C-101',                                                 detail:'Sheet C-101 indicates a new sanitary sewer tie-in at the northeast corner of the site. Coordination with the municipal utility authority will be required prior to construction. Contractor should verify permit requirements and lead times with the local municipality early in the project.',                                                                                                           date:'Mar 17, 2026', cost:'TBD',       sched:'TBD',       trades:'UTIL, GC'  },
+    ];
+
+    function RFIScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [tab, setTab] = useState('Overview');
+      const [rfiData, setRfiData] = useState(RFIS_DEFAULT);
+
+      function updateRfi(idx, field, val) {
+        setRfiData(rows => rows.map((r,i) => {
+          if (i !== idx) return r;
+          const updated = {...r, [field]: val};
+          if (field === 'type' && val === 'Non-RFI Area of Concern') updated.priority = 'N/A';
+          return updated;
+        }));
+      }
+
+      const counts = Object.fromEntries(PRIORITY_ORDER.map(p => [p, rfiData.filter(r => r.priority===p).length]));
+
+      /* ---- shared select style ---- */
+      const selStyle = (bg, color) => ({
+        fontSize:12, fontWeight:600, padding:'2px 8px', borderRadius:20,
+        border:'none', outline:'none', cursor:'pointer', appearance:'none',
+        background: bg, color,
+      });
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects',      onClick:() => navigate('projects')},
+            {label:'Project Alpha', onClick:() => navigate('projectHome')},
+            {label:'Document Quality Assurance Analyst'},
+          ]}/>
+
+          {/* Title */}
+          <div style={{padding:'32px 80px 24px'}}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button onClick={() => navigate('projectHome')} className="flex items-center justify-center rounded-full"
+                  style={{width:36,height:36,color:T.text,background:'none',border:'none',cursor:'pointer'}}>
+                  {Icon.back}
+                </button>
+                <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Document Quality Assurance Analyst</h1>
+              </div>
+              <div className="flex items-center gap-4">
+                <Btn variant="secondary">Re-run</Btn>
+              </div>
+            </div>
+            <p style={{paddingLeft:48, fontSize:16, color:T.sub, margin:'12px 0 0', lineHeight:'24px', maxWidth:'85%'}}>
+              Analyzes the project's document set to identify missing information, flag inconsistencies, and generate clarifying questions — so you can address critical issues before they become costly field problems.
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="px-[80px]">
+            <Tabs tabs={['Overview','Detailed RFIs with Evidence']} active={tab} onChange={setTab}/>
+          </div>
+
+          {/* ── TAB 1: OVERVIEW ── */}
+          {tab === 'Overview' && (
+            <div className="px-[80px] py-8 flex flex-col gap-8">
+
+              {/* Priority count cards */}
+              <div className="flex gap-4">
+                {PRIORITY_ORDER.map(p => (
+                  <div key={p} className="flex-1 rounded-[12px] border p-5"
+                    style={{borderColor: PRIORITY_STYLE[p].color + '55', background: T.card}}>
+                    <div style={{fontSize:36, fontWeight:700, color: PRIORITY_STYLE[p].color, lineHeight:1, marginBottom:8}}>
+                      {counts[p]}
+                    </div>
+                    <div style={{fontSize:13, fontWeight:600, color: PRIORITY_STYLE[p].color, marginBottom:2}}>{p} Priority</div>
+                    <div style={{fontSize:13, color:T.muted}}>{p === 'N/A' ? 'Non-RFI items' : p === 'Critical' ? 'Immediate action required' : p === 'Normal' ? 'Address before bid' : 'Address when possible'}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* RFI Summary Table */}
+              <div>
+                <h3 style={{fontSize:18, fontWeight:700, color:T.text, marginBottom:16}}>RFI Summary Table</h3>
+                <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25, overflowX:'auto'}}>
+                  <div style={{minWidth:1320}}>
+                    {/* Header */}
+                    <div className="flex items-center px-4 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                      {[
+                        {label:'RFI #',            w:64},
+                        {label:'RFI Type',         w:220},
+                        {label:'Subject',          flex:true},
+                        {label:'Priority',         w:90},
+                        {label:'References',       w:220},
+                        {label:'Detail',           flex:true},
+                        {label:'Date Identified',  w:128},
+                        {label:'Cost Impact',      w:100},
+                        {label:'Schedule Impact',  w:120},
+                        {label:'Trades Impacted',  w:120},
+                      ].map(h => (
+                        <div key={h.label} className="flex items-center gap-1 shrink-0"
+                          style={{width: h.flex ? undefined : h.w, flex: h.flex ? 1 : undefined, paddingRight:12}}>
+                          <span style={{fontSize:12, fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.04em'}}>{h.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Rows */}
+                    {rfiData.map((r, i) => {
+                      const ps = PRIORITY_STYLE[r.priority];
+                      return (
+                        <div key={r.num} className="trow flex items-start px-4 py-3 border-b"
+                          style={{borderColor:T.border, background:T.page}}>
+                          {/* RFI # */}
+                          <span style={{width:64, flexShrink:0, fontSize:13, fontFamily:'monospace', color:T.text, paddingTop:3, paddingRight:12}}>{r.num}</span>
+                          {/* RFI Type */}
+                          <div style={{width:220, flexShrink:0, paddingRight:12}}>
+                            <select value={r.type} onChange={e => updateRfi(i,'type',e.target.value)}
+                              style={{fontSize:12, color:T.sub, background:'none', border:'none', outline:'none', cursor:'pointer', width:'100%'}}>
+                              {RFI_TYPES.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          {/* Subject */}
+                          <span className="flex-1" style={{fontSize:14, fontWeight:500, color:T.text, paddingRight:12, lineHeight:'20px', paddingTop:2}}>{r.subj}</span>
+                          {/* Priority */}
+                          <div style={{width:90, flexShrink:0, paddingRight:12, paddingTop:2}}>
+                            <select value={r.priority} onChange={e => updateRfi(i,'priority',e.target.value)}
+                              style={selStyle(ps.bg, ps.color)}>
+                              {PRIORITY_ORDER.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                          {/* References */}
+                          <span style={{width:220, flexShrink:0, fontSize:12, color:T.sub, paddingRight:12, lineHeight:'18px', paddingTop:2}}>{r.refs}</span>
+                          {/* Detail */}
+                          <span className="flex-1 overflow-hidden" style={{fontSize:13, color:T.sub, paddingRight:12, lineHeight:'18px', paddingTop:2,
+                            display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'}}>{r.detail}</span>
+                          {/* Date Identified */}
+                          <span style={{width:128, flexShrink:0, fontSize:13, color:T.sub, paddingRight:12, paddingTop:2}}>{r.date}</span>
+                          {/* Cost Impact – read-only */}
+                          <span style={{width:100, flexShrink:0, paddingRight:12, paddingTop:2, fontSize:13, color:T.sub}}>{r.cost}</span>
+                          {/* Schedule Impact – read-only */}
+                          <span style={{width:120, flexShrink:0, paddingRight:12, paddingTop:2, fontSize:13, color:T.sub}}>{r.sched}</span>
+                          {/* Trades Impacted */}
+                          <span style={{width:120, flexShrink:0, fontSize:12, color:T.sub, paddingTop:2}}>{r.trades}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB 2: DETAILED RFIs WITH EVIDENCE ── */}
+          {tab === 'Detailed RFIs with Evidence' && (
+            <div className="px-[80px] py-8 flex flex-col gap-10">
+              {PRIORITY_ORDER.map(p => {
+                const items = rfiData.filter(r => r.priority === p);
+                if (items.length === 0) return null;
+                const ps = PRIORITY_STYLE[p];
+                return (
+                  <div key={p}>
+                    {/* Priority section header */}
+                    <div className="flex items-center gap-3 mb-5 pb-3 border-b" style={{borderColor:T.border}}>
+                      <div style={{width:10,height:10,borderRadius:'50%',background:ps.color,flexShrink:0}}/>
+                      <h3 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>{p} Priority</h3>
+                      <span style={{fontSize:12, fontWeight:600, padding:'2px 10px', borderRadius:20, background:ps.bg, color:ps.color}}>
+                        {items.length} item{items.length!==1?'s':''}
+                      </span>
+                    </div>
+
+                    {/* RFI cards for this priority */}
+                    <div className="flex flex-col gap-4">
+                      {items.map(r => (
+                        <div key={r.num} className="rounded-[12px] border p-6" style={{borderColor:T.bord25, background:T.card}}>
+                          {/* Card header */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex flex-col gap-1">
+                              <span style={{fontSize:12, fontFamily:'monospace', color:T.muted}}>RFI #{r.num}</span>
+                              <h4 style={{fontSize:17, fontWeight:700, color:T.text, margin:0}}>{r.subj}</h4>
+                              <span style={{fontSize:13, color:T.sub}}>{r.type}</span>
+                            </div>
+                            <span style={{fontSize:12, fontWeight:600, padding:'3px 10px', borderRadius:20, flexShrink:0, marginLeft:16,
+                              background:ps.bg, color:ps.color}}>{r.priority}</span>
+                          </div>
+
+                          {/* Detail paragraph */}
+                          <p style={{fontSize:15, lineHeight:'24px', color:T.sub, margin:'0 0 20px'}}>
+                            {r.detail}
+                          </p>
+
+                          {/* Metadata grid */}
+                          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px 40px',
+                            padding:'16px 20px', borderRadius:8, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(39,38,53,0.03)',
+                            border:`1px solid ${T.border}`}}>
+                            {[
+                              {label:'References',       val:r.refs},
+                              {label:'Trades Impacted',  val:r.trades},
+                              {label:'Date Identified',  val:r.date},
+                              {label:'Cost Impact',      val:r.cost},
+                              {label:'Schedule Impact',  val:r.sched},
+                            ].map(m => (
+                              <div key={m.label}>
+                                <div style={{fontSize:11, fontWeight:700, color:T.muted, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3}}>{m.label}</div>
+                                <div style={{fontSize:14, color:T.text}}>{m.val}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       MASTERFORMAT 50 DIVISIONS
+    ────────────────────────────────────────────────────────────────── */
+    const MASTERFORMAT_DIVISIONS = [
+      { num:'00', name:'Procurement and Contracting Requirements' },
+      { num:'01', name:'General Requirements' },
+      { num:'02', name:'Existing Conditions' },
+      { num:'03', name:'Concrete' },
+      { num:'04', name:'Masonry' },
+      { num:'05', name:'Metals' },
+      { num:'06', name:'Wood, Plastics, and Composites' },
+      { num:'07', name:'Thermal and Moisture Protection' },
+      { num:'08', name:'Openings' },
+      { num:'09', name:'Finishes' },
+      { num:'10', name:'Specialties' },
+      { num:'11', name:'Equipment' },
+      { num:'12', name:'Furnishings' },
+      { num:'13', name:'Special Construction' },
+      { num:'14', name:'Conveying Equipment' },
+      { num:'21', name:'Fire Suppression' },
+      { num:'22', name:'Plumbing' },
+      { num:'23', name:'Heating, Ventilating, and Air Conditioning (HVAC)' },
+      { num:'25', name:'Integrated Automation' },
+      { num:'26', name:'Electrical' },
+      { num:'27', name:'Communications' },
+      { num:'28', name:'Electronic Safety and Security' },
+      { num:'31', name:'Earthwork' },
+      { num:'32', name:'Exterior Improvements' },
+      { num:'33', name:'Utilities' },
+      { num:'34', name:'Transportation' },
+      { num:'35', name:'Waterway and Marine Construction' },
+      { num:'40', name:'Process Integration' },
+      { num:'41', name:'Material Processing and Handling Equipment' },
+      { num:'42', name:'Process Heating, Cooling, and Drying Equipment' },
+      { num:'43', name:'Process Gas and Liquid Handling, Purification, and Storage Equipment' },
+      { num:'44', name:'Pollution and Waste Control Equipment' },
+      { num:'45', name:'Industry-Specific Manufacturing Equipment' },
+      { num:'46', name:'Water and Wastewater Equipment' },
+      { num:'48', name:'Electrical Power Generation' },
+    ];
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 8: BID LEVELING – Select Files
+    ────────────────────────────────────────────────────────────────── */
+    const BID_FILES = [
+      {name:'BC_survey.tif',              type:'Drawing',     pages:20, size:'13.12', date:'Aug 11 2025', divs:['02','31']},
+      {name:'bc_schedules and 2025.xlsx', type:'Spreadsheet', pages:15, size:'12.85', date:'Aug 11 2025', divs:['00','01']},
+      {name:'catreport',                  type:'Drawing',     pages:24, size:'14.52', date:'Oct 2 2025',  divs:['03','05','09','26']},
+      {name:'demolitions',                type:'Specs',       pages:11, size:'2.84',  date:'Aug 11 2025', divs:['02','03']},
+      {name:'Plans',                      type:'Export File', pages:10, size:'14.58', date:'Jun 11 2025', divs:['00','01','03','05','09','22','23','26']},
+    ];
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 7: BID LEVELING – Select Division
+    ────────────────────────────────────────────────────────────────── */
+    function BidDivisionScreen({ navigate }) {
+      const { isDark, setBidDivision } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [selected, setSelected] = useState('');
+      const canContinue = selected !== '';
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects',     onClick:() => navigate('projects')},
+            {label:'Project Alpha', onClick:() => navigate('projectHome')},
+            {label:'Bid Leveling'},
+          ]}/>
+          <div style={{padding:'40px 80px 24px'}}>
+            <div className="flex items-center gap-3 mb-2">
+              <button onClick={() => navigate('projectHome')} className="flex items-center justify-center rounded-full"
+                style={{width:36,height:36,color:T.text,background:'none',border:'none',cursor:'pointer'}}>
+                {Icon.back}
+              </button>
+              <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Bid Leveling</h1>
+            </div>
+            <p style={{paddingLeft:48, fontSize:16, color:T.sub, margin:'4px 0 0'}}>
+              Select the trade division you'd like to run a bid leveling analysis for.
+            </p>
+          </div>
+
+          <div style={{padding:'8px 80px 64px', paddingLeft:128}}>
+            <div style={{maxWidth:480}}>
+              <label style={{display:'block', fontSize:14, fontWeight:600, color:T.text, marginBottom:8}}>
+                Trade Division
+              </label>
+              <select
+                value={selected}
+                onChange={e => setSelected(e.target.value)}
+                style={{
+                  width:'100%', fontSize:15, color: selected ? T.text : T.muted,
+                  background: T.card, border:`1px solid ${T.bord25}`,
+                  borderRadius:8, padding:'10px 14px', outline:'none', cursor:'pointer',
+                  appearance:'none',
+                  backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                  backgroundRepeat:'no-repeat', backgroundPosition:'right 14px center',
+                  paddingRight:36,
+                }}>
+                <option value="">Select a division…</option>
+                {MASTERFORMAT_DIVISIONS.map(d => (
+                  <option key={d.num} value={d.num}>Division {d.num} – {d.name}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-3 mt-8">
+                <Btn variant="secondary" onClick={() => navigate('projectHome')}>Cancel</Btn>
+                <Btn
+                  onClick={() => { if (!canContinue) return; setBidDivision(selected); navigate('bidFiles'); }}
+                  className={!canContinue ? 'opacity-40 cursor-not-allowed' : ''}>
+                  Continue
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 8: BID LEVELING – Select Files
+    ────────────────────────────────────────────────────────────────── */
+    function BidFilesScreen({ navigate }) {
+      const { isDark, bidDivision } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+
+      const divInfo = MASTERFORMAT_DIVISIONS.find(d => d.num === bidDivision);
+      const divName = divInfo ? `Division ${divInfo.num} – ${divInfo.name}` : '';
+
+      // Pre-select files that are tagged for this division
+      const relatedSet = new Set(
+        BID_FILES.map((f,i) => f.divs?.includes(bidDivision) ? i : -1).filter(i => i >= 0)
+      );
+      const hasRelated = relatedSet.size > 0;
+
+      const [sel, setSel] = useState(relatedSet);
+      const toggle = i => {
+        const s = new Set(sel);
+        if (s.has(i)) s.delete(i); else s.add(i);
+        setSel(s);
+      };
+
+      const descText = hasRelated
+        ? `Here's what we found that's related to ${divName}. Select or upload a file you want this tool to analyze.`
+        : `No related files were found. Select or upload a file you want this tool to analyze.`;
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects',      onClick:() => navigate('projects')},
+            {label:'Project Alpha', onClick:() => navigate('projectHome')},
+            {label:'Bid Leveling',  onClick:() => navigate('bidDivision')},
+            {label:'Select Files'},
+          ]}/>
+          <div style={{padding:'40px 80px 24px'}}>
+            <div className="flex items-center gap-3 mb-2">
+              <button onClick={() => navigate('bidDivision')} className="flex items-center justify-center rounded-full"
+                style={{width:36,height:36,color:T.text,background:'none',border:'none',cursor:'pointer'}}>
+                {Icon.back}
+              </button>
+              <h1 style={{fontSize:32, fontWeight:700, color:T.text, margin:0}}>Select Files</h1>
+            </div>
+            <p style={{paddingLeft:48, fontSize:16, color: hasRelated ? T.sub : T.muted, margin:0, fontStyle: hasRelated ? 'normal' : 'italic'}}>
+              {descText}
+            </p>
+          </div>
+
+          <div style={{padding:'0 80px 64px'}}>
+            <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                <span style={{fontSize:16, fontWeight:700, color:T.text}}>Files &amp; documents</span>
+                <Btn sm variant="secondary">Upload File</Btn>
+              </div>
+              <div className="flex gap-4 px-4 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
+                <div style={{width:20}}/>
+                {['File Name','Type','Pages','Size','Date'].map((h,i) => (
+                  <span key={h} className={i===0 ? 'flex-1' : ''}
+                    style={{fontSize:13, fontWeight:700, color:T.text, width: i>0 ? 100 : undefined}}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+              {BID_FILES.map((f,i) => (
+                <div key={i} className="trow flex gap-4 px-4 py-3 border-b items-center cursor-pointer"
+                  style={{borderColor:T.border, background: T.page}} onClick={() => toggle(i)}>
+                  <input type="checkbox" checked={sel.has(i)} onChange={() => toggle(i)} style={{width:16,height:16}}/>
+                  <span className="flex-1 truncate" style={{fontSize:15, color:T.text}}>{f.name}</span>
+                  <span style={{width:100, fontSize:15, color:T.sub}}>{f.type}</span>
+                  <span style={{width:100, fontSize:15, color:T.sub}}>{f.pages}</span>
+                  <span style={{width:100, fontSize:15, color:T.sub}}>{f.size} MB</span>
+                  <span style={{width:100, fontSize:15, color:T.sub}}>{f.date}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-4 py-3" style={{background: T.card, borderTop:`1px solid ${T.border}`}}>
+                <span style={{fontSize:14, color:T.muted}}>{sel.size} file{sel.size!==1?'s':''} selected</span>
+                <Btn onClick={() => sel.size > 0 && navigate('bidLoading')}
+                  className={sel.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}>
+                  Run Bid Leveling Analysis
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 8: BID LEVELING – Loading
+    ────────────────────────────────────────────────────────────────── */
+    const BID_STAGES = ['Reading bid documents…','Normalizing scope items…','Identifying inclusions & exclusions…','Calculating adjusted totals…'];
+
+    function BidLoadingScreen({ navigate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const [stage, setStage] = useState(0);
+      useEffect(() => {
+        const intervals = BID_STAGES.map((_, i) =>
+          setTimeout(() => setStage(i), i * 900)
+        );
+        const done = setTimeout(() => navigate('bidResults'), 4200);
+        return () => { intervals.forEach(clearTimeout); clearTimeout(done); };
+      }, []);
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects'},
+            {label:'Project Files'},
+            {label:'Bid Leveling Analysis'},
+          ]}/>
+          <div className="flex flex-1 flex-col items-center justify-center px-[80px] py-16">
+            <div style={{width:'100%', maxWidth:600}}>
+              <h2 style={{fontSize:24, fontWeight:700, color:T.text, marginBottom:8}}>Bid Leveling Analyst</h2>
+              <p style={{fontSize:16, color:T.sub, marginBottom:32}}>{BID_STAGES[stage]}</p>
+              <div style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:4, height:4, overflow:'hidden', marginBottom:12}}>
+                <div className="progress-anim" style={{height:'100%', background:T.brand, borderRadius:4}}/>
+              </div>
+              <p style={{fontSize:14, color:T.muted}}>Processing selected files…</p>
+              <div style={{marginTop:48}} className="flex flex-col gap-3">
+                {[90, 75, 85, 65, 80].map((w,i) => (
+                  <div key={i} className="skeleton rounded" style={{height:14, width:`${w}%`}}/>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       SCREEN 9: BID LEVELING – Results
+    ────────────────────────────────────────────────────────────────── */
+    // One row per company — single division bid leveling
+    const BID_LEVEL_ROWS = [
+      { company:'ThermalTech Solutions',  bidAmt:'$365,000', adjAmt:'$369,800', variance:'-1.6%', flag:'recommended' },
+      { company:'Ewing Electric Co.',     bidAmt:'$380,000', adjAmt:'$375,200', variance:'-1.3%', flag:''            },
+      { company:'Apex Electric Group',    bidAmt:'$392,000', adjAmt:'$390,000', variance:'+1.4%', flag:''            },
+      { company:'Summit Mechanical',      bidAmt:'$412,000', adjAmt:'$398,500', variance:'+5.8%', flag:'outlier'     },
+    ];
+
+    const BID_LEVEL_SUMMARY = [
+      { card:'Recommended Bid', company:'ThermalTech Solutions', amount:'$369,800',
+        note:'Lowest normalized total — recommended for award consideration', type:'recommended' },
+      { card:'Outlier',         company:'Summit Mechanical',     amount:'$398,500',
+        note:'5.8% above adjusted average — scope review recommended before award', type:'outlier' },
+      { card:'Adjusted Average',company:'All bidders',           amount:'$383,375',
+        note:'Average of all normalized bid amounts across submissions', type:'average' },
+    ];
+
+    function BidResultsScreen({ navigate }) {
+      const { isDark, bidDivision } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const divInfo  = MASTERFORMAT_DIVISIONS.find(d => d.num === bidDivision);
+      const divLabel = divInfo ? `Division ${divInfo.num} – ${divInfo.name}` : 'Selected Division';
+      const [tab, setTab] = useState('Overview');
+
+      /* Accordion state for Detailed Analysis tab */
+      const [openBidder, setOpenBidder] = useState(null);
+
+      const chevronSvg = open => (
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{flexShrink:0, opacity:0.6}}>
+          <path d={open ? "M5 12.5L10 7.5L15 12.5" : "M5 7.5L10 12.5L15 7.5"}
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+
+      /* ── Bid Leveling Analysis data ── */
+      const SCOPE_ITEMS = [
+        {item:'Base Labor & Material',   thermalTech:'$310,000', ewing:'$325,000', apex:'$338,000', summit:'$355,000'},
+        {item:'Equipment & Fixtures',    thermalTech:'$38,500',  ewing:'$40,200',  apex:'$39,800',  summit:'$42,000'},
+        {item:'Permits & Fees',          thermalTech:'$8,200',   ewing:'$8,200',   apex:'$8,200',   summit:'$8,200'},
+        {item:'Startup & Commissioning', thermalTech:'$9,100',   ewing:'$9,600',   apex:'$9,500',   summit:'$9,800'},
+        {item:'Escalation / Contingency',thermalTech:'—',        ewing:'—',        apex:'—',        summit:'$12,000 *'},
+        {item:'Total Bid',               thermalTech:'$365,800', ewing:'$383,000', apex:'$395,500', summit:'$427,000', bold:true},
+        {item:'Adjustments / Add-backs', thermalTech:'+$4,000',  ewing:'-$7,800',  apex:'-$5,500',  summit:'-$28,500'},
+        {item:'Adjusted Total',          thermalTech:'$369,800', ewing:'$375,200', apex:'$390,000', summit:'$398,500', bold:true, highlight:true},
+      ];
+
+      const EXCLUSIONS = [
+        {item:'Sales Tax on Materials',       thermalTech:'Excluded', ewing:'Included', apex:'Included',  summit:'Excluded'},
+        {item:'Owner-Furnished Equipment',    thermalTech:'Excluded', ewing:'Excluded', apex:'Excluded',  summit:'Excluded'},
+        {item:'Escalation Clause',            thermalTech:'No',       ewing:'No',       apex:'No',        summit:'Yes *'},
+        {item:'Unapproved Equipment Alt.',    thermalTech:'No',       ewing:'No',       apex:'No',        summit:'Yes *'},
+        {item:'Startup & Commissioning',      thermalTech:'Included', ewing:'Included', apex:'Included',  summit:'Included'},
+        {item:'Equipment Warranty (1-year)',  thermalTech:'Included', ewing:'Included', apex:'Excluded',  summit:'Included'},
+        {item:'Bid Bond',                     thermalTech:'Included', ewing:'Included', apex:'Included',  summit:'Included'},
+      ];
+
+      const COMPANIES = ['ThermalTech Solutions','Ewing Electric Co.','Apex Electric Group','Summit Mechanical'];
+
+      const DETAILED_ANALYSIS = [
+        {
+          company:'ThermalTech Solutions',
+          flag:'recommended',
+          summary:'Lowest normalized bid at $369,800. Recommended for award consideration.',
+          paragraphs:[
+            'ThermalTech Solutions submitted the most competitive bid after normalization at $369,800. Their base scope is complete and aligned with the issued bid documents. The $4,000 add-back reflects a pre-approved equipment substitution reviewed during the pre-bid conference — the alternate manufacturer meets project performance specifications and has been accepted by the engineer of record.',
+            'Their proposal clearly separates labor, material, and equipment costs, which simplifies verification and audit. No escalation clauses or exclusionary language was found in the submission. Startup and commissioning are included in the lump sum.',
+            'Recommend proceeding with ThermalTech Solutions as the apparent low bidder, pending final owner approval. No scope clarification is required at this time.',
+          ],
+        },
+        {
+          company:'Ewing Electric Co.',
+          flag:'',
+          summary:'Second-lowest adjusted bid at $375,200. Clean submission with no exceptions.',
+          paragraphs:[
+            'Ewing Electric Co. submitted a well-organized bid at an adjusted total of $375,200. Their scope is comprehensive and includes sales tax on materials, which accounts for the slight premium over ThermalTech Solutions.',
+            'No equipment alternates or exclusions of concern were identified. Startup and commissioning are included. Equipment warranty language is standard (1-year parts and labor). Ewing Electric Co. represents a low-risk second option should the recommended bidder be unable to perform.',
+          ],
+        },
+        {
+          company:'Apex Electric Group',
+          flag:'',
+          summary:'Third-lowest adjusted bid at $390,000. Minor scope gap noted on warranty.',
+          paragraphs:[
+            'Apex Electric Group submitted an adjusted bid of $390,000. Their pricing is within the acceptable variance range for a project of this scope. Sales tax on materials is included and their base scope is complete per the bid documents.',
+            'One notable exclusion: Apex Electric Group\'s proposal does not include a 1-year equipment warranty for installed fixtures. This exclusion should be reconciled prior to any award, either through a revised submission or a clarifying letter confirming warranty coverage will be provided under the standard purchase terms.',
+          ],
+        },
+        {
+          company:'Summit Mechanical',
+          flag:'outlier',
+          summary:'High outlier at $398,500 (+5.8% above adjusted average). Scope review required.',
+          paragraphs:[
+            'Summit Mechanical\'s submitted bid of $427,000 was the highest received. After normalization — primarily the removal of a $12,000 escalation clause and a $16,500 adjustment for the unapproved equipment alternate — the adjusted total is $398,500, still 5.8% above the adjusted average.',
+            'The escalation clause included in Summit Mechanical\'s proposal was not requested in the bid documents and was not discussed during the pre-bid conference. The referenced equipment alternate has not been reviewed or approved by the engineer of record. These items introduce contract risk and pricing ambiguity.',
+            'Recommend issuing a scope clarification request to Summit Mechanical addressing: (1) removal of the escalation clause, and (2) confirmation of compliance with the specified equipment basis-of-design or formal submission of an approved alternate. A revised bid should be requested within 5 business days.',
+          ],
+        },
+      ];
+
+      const colW = 160;
+      const companies = ['ThermalTech Solutions','Ewing Electric Co.','Apex Electric Group','Summit Mechanical'];
+
+      const cellColor = (val) => {
+        if (val === 'Yes *' || val === 'Excluded') return isDark ? '#f87171' : '#dc2626';
+        if (val === 'Included') return T.teal;
+        return T.sub;
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen fade-in" style={{background:T.page}}>
+          <NavBar navigate={navigate}/>
+          <Crumbs items={[
+            {label:'Projects',           onClick:() => navigate('projects')},
+            {label:'Project Alpha',      onClick:() => navigate('projectHome')},
+            {label:'Bid Leveling Analyst'},
+          ]}/>
+
+          {/* Title bar */}
+          <div style={{padding:'32px 80px 24px 32px'}}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <button onClick={() => navigate('bidFiles')}
+                  style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',
+                    color:T.text,background:'none',border:'none',cursor:'pointer'}}>
+                  {Icon.back}
+                </button>
+                <h1 style={{fontSize:32,fontWeight:700,color:T.text,margin:0}}>Bid Leveling Analyst</h1>
+              </div>
+              <div className="flex items-center gap-4">
+                <Btn variant="secondary">Re-run</Btn>
+                <button style={{width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',
+                  background:'none',border:`1px solid ${T.bord25}`,borderRadius:8,cursor:'pointer',
+                  color:T.text,opacity:0.65}}>
+                  {Icon.download}
+                </button>
+              </div>
+            </div>
+            <p style={{paddingLeft:48,fontSize:16,color:T.sub,margin:0,lineHeight:'24px'}}>
+              Compares contractor bids fairly by standardizing submissions, identifying missing or inconsistent scope items, and adjusting costs so every bid reflects an equivalent scope — ensuring award decisions are based on true value, not just the lowest number.
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="px-[80px]">
+            <Tabs tabs={['Overview','Bid Leveling Analysis','Detailed Analysis']} active={tab} onChange={setTab}/>
+          </div>
+
+          {/* ══ OVERVIEW ══ */}
+          {tab === 'Overview' && (
+            <div style={{padding:'48px 80px 80px'}}>
+
+              {/* Division label */}
+              <p style={{fontSize:13, fontWeight:600, color:T.muted, textTransform:'uppercase',
+                letterSpacing:'0.07em', margin:'0 0 20px'}}>{divLabel}</p>
+
+              {/* Three summary cards */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                {BID_LEVEL_SUMMARY.map(b => {
+                  const isRec = b.type === 'recommended';
+                  const isOut = b.type === 'outlier';
+                  return (
+                    <div key={b.card} className="rounded-[12px] border p-5" style={{
+                      borderColor: isRec ? 'rgba(72,193,181,0.4)' : isOut ? 'rgba(245,158,11,0.3)' : T.bord25,
+                      background:  isRec ? (isDark ? 'rgba(72,193,181,0.06)' : 'rgba(72,193,181,0.03)')
+                                 : isOut ? (isDark ? 'rgba(245,158,11,0.06)' : 'rgba(245,158,11,0.02)')
+                                 : T.card,
+                    }}>
+                      <span style={{fontSize:12, fontWeight:600, padding:'2px 8px', borderRadius:4,
+                        display:'inline-block', marginBottom:10,
+                        background: isRec ? 'rgba(72,193,181,0.15)' : isOut ? 'rgba(245,158,11,0.12)' : 'rgba(80,71,243,0.1)',
+                        color:      isRec ? T.teal : isOut ? '#b45309' : T.link}}>
+                        {b.card}
+                      </span>
+                      <div style={{fontSize:28, fontWeight:700, color:T.text, marginBottom:6}}>{b.amount}</div>
+                      {!isOut && b.type !== 'average' && <div style={{fontSize:14, fontWeight:600, color:T.text, marginBottom:4}}>{b.company}</div>}
+                      {isOut && <div style={{fontSize:14, fontWeight:600, color:T.text, marginBottom:4}}>{b.company}</div>}
+                      <p style={{fontSize:13, color: isRec ? T.teal : T.muted, margin:0, lineHeight:'18px'}}>{b.note}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bid comparison table */}
+              <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
+                <div className="flex gap-4 px-6 py-3 border-b" style={{background:T.card, borderColor:T.border}}>
+                  {['Company','Bid Amount','Adjusted Amount','Variance'].map((h,i) => (
+                    <span key={h} style={{
+                      flex: i===0 ? 1 : 'none', width: i>0 ? 150 : undefined,
+                      fontSize:13, fontWeight:700, color:T.text, textAlign: i>0 ? 'right' : 'left'}}>
+                      {h}
+                    </span>
+                  ))}
+                </div>
+                {BID_LEVEL_ROWS.map((r,i) => {
+                  const isRec = r.flag === 'recommended';
+                  const isOut = r.flag === 'outlier';
+                  return (
+                    <div key={i} className="trow flex gap-4 px-6 py-3 border-b items-center"
+                      style={{borderColor:T.border, background:T.page}}>
+                      <div style={{flex:1, display:'flex', alignItems:'center', gap:8}}>
+                        <span style={{fontSize:15, color:T.text, fontWeight: isRec ? 600 : 400}}>{r.company}</span>
+                        {isRec && <span style={{fontSize:11,fontWeight:700,padding:'2px 7px',borderRadius:20,
+                          background:'rgba(72,193,181,0.15)',color:T.teal}}>Recommended</span>}
+                        {isOut && <span style={{fontSize:11,fontWeight:700,padding:'2px 7px',borderRadius:20,
+                          background:'rgba(245,158,11,0.12)',color:'#b45309'}}>Outlier</span>}
+                      </div>
+                      <span style={{width:150,fontSize:15,color:T.sub,textAlign:'right'}}>{r.bidAmt}</span>
+                      <span style={{width:150,fontSize:15,fontWeight:500,
+                        color: isRec ? T.teal : T.text, textAlign:'right'}}>{r.adjAmt}</span>
+                      <div style={{width:150,textAlign:'right'}}>
+                        <span style={{fontSize:13,padding:'2px 8px',borderRadius:4,
+                          background: isOut ? 'rgba(245,158,11,0.1)' : 'rgba(39,38,53,0.06)',
+                          color: isOut ? '#b45309' : T.muted}}>{r.variance}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          )}
+
+          {/* ══ BID LEVELING ANALYSIS ══ */}
+          {tab === 'Bid Leveling Analysis' && (
+            <div style={{padding:'48px 80px 80px'}}>
+
+              {/* Table 1: Scope Leveling */}
+              <h2 style={{fontSize:20, fontWeight:700, color:T.text, margin:'0 0 4px'}}>Scope Leveling</h2>
+              <p style={{fontSize:15, color:T.muted, margin:'0 0 20px', lineHeight:'22px'}}>
+                Side-by-side comparison of each bidder's line item pricing, normalized to an equivalent scope.
+                Items marked * indicate adjustments applied during leveling.
+              </p>
+              <div className="rounded-[8px] border overflow-hidden mb-12" style={{borderColor:T.bord25, overflowX:'auto'}}>
+                {/* Header */}
+                <div className="flex px-6 py-3 border-b" style={{background:T.card, borderColor:T.border, minWidth:800}}>
+                  <span style={{flex:1, fontSize:13, fontWeight:700, color:T.text}}>Scope Item</span>
+                  {companies.map(c => {
+                    const isRec = c === 'ThermalTech Solutions';
+                    const isOut = c === 'Summit Mechanical';
+                    return (
+                      <span key={c} style={{width:colW, flexShrink:0, fontSize:13, fontWeight:700, textAlign:'right',
+                        color: isRec ? T.teal : isOut ? '#b45309' : T.text}}>
+                        {c.split(' ')[0]}
+                      </span>
+                    );
+                  })}
+                </div>
+                {SCOPE_ITEMS.map((row,i) => (
+                  <div key={i} className="flex px-6 py-3 border-b items-center"
+                    style={{borderColor:T.border, minWidth:800,
+                      background: row.highlight ? (isDark ? 'rgba(72,193,181,0.05)' : 'rgba(72,193,181,0.03)') : (i%2===0 ? T.page : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)')) }}>
+                    <span style={{flex:1, fontSize:14, fontWeight: row.bold ? 700 : 400,
+                      color: row.bold ? T.text : T.sub}}>{row.item}</span>
+                    {[row.thermalTech, row.ewing, row.apex, row.summit].map((val,j) => {
+                      const isRec = j===0;
+                      const isOut = j===3;
+                      return (
+                        <span key={j} style={{width:colW, flexShrink:0, fontSize:14, textAlign:'right',
+                          fontWeight: row.bold ? 700 : 400,
+                          color: row.highlight ? (isRec ? T.teal : isOut ? '#b45309' : T.text)
+                               : row.bold ? T.text : T.sub}}>
+                          {val}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              {/* Table 2: Exclusions */}
+              <h2 style={{fontSize:20, fontWeight:700, color:T.text, margin:'0 0 4px'}}>Bid Exclusions & Inclusions</h2>
+              <p style={{fontSize:15, color:T.muted, margin:'0 0 20px', lineHeight:'22px'}}>
+                Items explicitly included or excluded in each bidder's submission. Items marked * require follow-up or clarification.
+              </p>
+              <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25, overflowX:'auto'}}>
+                <div className="flex px-6 py-3 border-b" style={{background:T.card, borderColor:T.border, minWidth:800}}>
+                  <span style={{flex:1, fontSize:13, fontWeight:700, color:T.text}}>Item</span>
+                  {companies.map(c => {
+                    const isRec = c === 'ThermalTech Solutions';
+                    const isOut = c === 'Summit Mechanical';
+                    return (
+                      <span key={c} style={{width:colW, flexShrink:0, fontSize:13, fontWeight:700, textAlign:'right',
+                        color: isRec ? T.teal : isOut ? '#b45309' : T.text}}>
+                        {c.split(' ')[0]}
+                      </span>
+                    );
+                  })}
+                </div>
+                {EXCLUSIONS.map((row,i) => (
+                  <div key={i} className="flex px-6 py-3 border-b items-center"
+                    style={{borderColor:T.border, minWidth:800,
+                      background: i%2===0 ? T.page : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)')}}>
+                    <span style={{flex:1, fontSize:14, color:T.sub}}>{row.item}</span>
+                    {[row.thermalTech, row.ewing, row.apex, row.summit].map((val,j) => (
+                      <span key={j} style={{width:colW, flexShrink:0, fontSize:13, textAlign:'right',
+                        fontWeight: val.includes('*') || val === 'Excluded' ? 600 : 400,
+                        color: cellColor(val)}}>
+                        {val}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <p style={{fontSize:13, color:T.muted, marginTop:10}}>* Requires clarification or scope review before award.</p>
+
+            </div>
+          )}
+
+          {/* ══ DETAILED ANALYSIS ══ */}
+          {tab === 'Detailed Analysis' && (
+            <div style={{padding:'48px 80px 80px'}}>
+              <p style={{fontSize:15, color:T.muted, margin:'0 0 28px', lineHeight:'22px'}}>
+                Detailed position on each bidder's submission. Select a bidder to expand their full analysis.
+              </p>
+
+              <div style={{borderTop:`1px solid ${T.border}`}}>
+                {DETAILED_ANALYSIS.map((b, i) => {
+                  const isOpen  = openBidder === i;
+                  const isRec   = b.flag === 'recommended';
+                  const isOut   = b.flag === 'outlier';
+                  return (
+                    <div key={i} style={{borderBottom:`1px solid ${T.border}`}}>
+                      {/* Accordion header */}
+                      <div className="flex items-center gap-4 py-5" style={{cursor:'pointer'}}
+                        onClick={() => setOpenBidder(isOpen ? null : i)}>
+                        {chevronSvg(isOpen)}
+                        <span style={{flex:1, fontSize:18, fontWeight:700, color:T.text}}>{b.company}</span>
+                        {isRec && <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:20,
+                          background:'rgba(72,193,181,0.15)',color:T.teal}}>Recommended</span>}
+                        {isOut && <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:20,
+                          background:'rgba(245,158,11,0.12)',color:'#b45309'}}>Outlier</span>}
+                        <span style={{fontSize:14, color:T.muted}}>{b.summary}</span>
+                      </div>
+                      {/* Accordion body */}
+                      {isOpen && (
+                        <div style={{paddingBottom:28, paddingLeft:26, display:'flex', flexDirection:'column', gap:14}}>
+                          {b.paragraphs.map((p, pi) => (
+                            <p key={pi} style={{fontSize:15, lineHeight:'26px', color:T.sub, margin:0}}>{p}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────
+       APP ROUTER
+    ────────────────────────────────────────────────────────────────── */
+    function App() {
+      const [screen, setScreen] = useState('projects');
+      const [darkMode, setDarkMode] = useState(false);
+      const [bidDivision, setBidDivision] = useState(null);
+
+      const navigate = s => { setScreen(s); window.scrollTo(0, 0); };
+      const toggleDark = () => setDarkMode(d => !d);
+
+      useEffect(() => {
+        document.body.className = darkMode ? 'dark' : '';
+        document.body.style.background = darkMode ? D.page : 'white';
+      }, [darkMode]);
+
+      const screens = {
+        projects:     <ProjectsScreen     navigate={navigate}/>,
+        upload:       <UploadScreen       navigate={navigate}/>,
+        loading:      <LoadingScreen      navigate={navigate}/>,
+        projectHome:  <ProjectHomeScreen  navigate={navigate}/>,
+        romLoading:   <ROMLoadingScreen   navigate={navigate}/>,
+        rom:          <ROMScreen          navigate={navigate}/>,
+        rfiLoading:   <RFILoadingScreen   navigate={navigate}/>,
+        rfi:          <RFIScreen          navigate={navigate}/>,
+        bidDivision:  <BidDivisionScreen  navigate={navigate}/>,
+        bidFiles:     <BidFilesScreen     navigate={navigate}/>,
+        bidLoading:   <BidLoadingScreen   navigate={navigate}/>,
+        bidResults:   <BidResultsScreen   navigate={navigate}/>,
+      };
+
+      return (
+        <ThemeCtx.Provider value={{ isDark: darkMode, toggleDark, bidDivision, setBidDivision }}>
+          <div className="app-wrap">
+            {screens[screen] || screens.projects}
+          </div>
+        </ThemeCtx.Provider>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
