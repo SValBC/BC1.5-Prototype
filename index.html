@@ -977,11 +977,16 @@
     ];
 
     const BIDS = [
-      { id:1, div:'26', trade:'Electrical',  company:'Ewing Electric Co.',        dateRun:'Dec 15, 2025', status:'Won',         captain:'Sarah Chen'  },
-      { id:2, div:'22', trade:'Plumbing',    company:'Summit Mechanical',         dateRun:'Jan 8, 2026',  status:'Submitted',   captain:'Marcus Webb' },
-      { id:3, div:'03', trade:'Concrete',    company:'Apex Concrete Group',       dateRun:'Feb 20, 2026', status:'In Progress', captain:''            },
-      { id:4, div:'23', trade:'HVAC',        company:'ThermalTech Solutions',     dateRun:'Mar 5, 2026',  status:'New',         captain:''            },
-      { id:5, div:'05', trade:'Steel',       company:'Ironside Structural Inc.',  dateRun:'Nov 2, 2025',  status:'No Bid',      captain:'Devon Park'  },
+      { id:1,  div:'03', trade:'Concrete – Foundation',    company:'Apex Concrete Group',       dateRun:'Feb 20, 2026', status:'In Progress', captain:''             },
+      { id:2,  div:'03', trade:'Concrete – Superstructure',company:'Rockform Concrete LLC',     dateRun:'Feb 20, 2026', status:'Submitted',   captain:'Marcus Webb'  },
+      { id:3,  div:'05', trade:'Structural Steel',         company:'Ironside Structural Inc.',  dateRun:'Nov 2, 2025',  status:'No Bid',      captain:'Devon Park'   },
+      { id:4,  div:'05', trade:'Metal Decking',            company:'SteelForm Systems',         dateRun:'Nov 2, 2025',  status:'Won',         captain:'Devon Park'   },
+      { id:5,  div:'22', trade:'Plumbing',                 company:'Summit Mechanical',         dateRun:'Jan 8, 2026',  status:'Submitted',   captain:'Marcus Webb'  },
+      { id:6,  div:'22', trade:'Medical Gas',              company:'CleanAir Piping Co.',       dateRun:'Jan 8, 2026',  status:'New',         captain:''             },
+      { id:7,  div:'23', trade:'HVAC',                     company:'ThermalTech Solutions',     dateRun:'Mar 5, 2026',  status:'New',         captain:''             },
+      { id:8,  div:'23', trade:'Building Automation',      company:'Siemens Building Tech',     dateRun:'Mar 5, 2026',  status:'In Progress', captain:'Sarah Chen'   },
+      { id:9,  div:'26', trade:'Electrical',               company:'Ewing Electric Co.',        dateRun:'Dec 15, 2025', status:'Won',         captain:'Sarah Chen'   },
+      { id:10, div:'26', trade:'Low Voltage / Data',       company:'Integrated Comm. Group',    dateRun:'Dec 15, 2025', status:'Submitted',   captain:'Marcus Webb'  },
     ];
 
     const LABOR_TRADES_DEFAULT = [
@@ -1028,6 +1033,7 @@
       const [bidStatuses, setBidStatuses] = useState(() =>
         Object.fromEntries(BIDS.map(b => [b.id, b.status]))
       );
+      const [expandedBidDivs, setExpandedBidDivs] = useState({});
 
       // Labor rates state
       const [laborRows, setLaborRows]   = useState(LABOR_TRADES_DEFAULT);
@@ -1249,132 +1255,162 @@
           )}
 
           {/* ── BID TRACKER ── */}
-          {tab === 'Bid Tracker' && (
+          {tab === 'Bid Tracker' && (() => {
+            // Group bids by division
+            const divNums = [...new Set(BIDS.map(b => b.div))].sort();
+            const getDivName = num => {
+              const mf = MASTERFORMAT_DIVISIONS.find(d => d.num === num);
+              return mf ? mf.name : num;
+            };
+            return (
             <div className="px-[80px] py-8 flex flex-col gap-6">
-              {/* Header row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2" style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:8, padding:'4px 6px'}}>
-                  {['All','Active','Recent'].map(f => (
-                    <button key={f}
-                      onClick={() => setBidFilter(f)}
-                      style={{
-                        fontSize:14, fontWeight: bidFilter===f ? 600 : 400,
-                        color: bidFilter===f ? T.text : T.sub,
-                        background: bidFilter===f ? (isDark ? '#3c3b4a' : '#fff') : 'none',
-                        border:'none', cursor:'pointer', borderRadius:6,
-                        padding:'5px 14px',
-                        boxShadow: bidFilter===f ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                        transition:'all 0.15s',
-                      }}>
-                      {f}
-                    </button>
-                  ))}
-                </div>
+              {/* Filter pill */}
+              <div className="flex items-center gap-2" style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:8, padding:'4px 6px', alignSelf:'flex-start'}}>
+                {['All','Active','Recent'].map(f => (
+                  <button key={f}
+                    onClick={() => setBidFilter(f)}
+                    style={{
+                      fontSize:14, fontWeight: bidFilter===f ? 600 : 400,
+                      color: bidFilter===f ? T.text : T.sub,
+                      background: bidFilter===f ? (isDark ? '#3c3b4a' : '#fff') : 'none',
+                      border:'none', cursor:'pointer', borderRadius:6,
+                      padding:'5px 14px',
+                      boxShadow: bidFilter===f ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      transition:'all 0.15s',
+                    }}>
+                    {f}
+                  </button>
+                ))}
               </div>
 
-              {/* Table */}
+              {/* Accordion table */}
               <div className="rounded-[10px] border overflow-hidden" style={{borderColor:T.bord25}}>
+
                 {/* Column headers */}
                 <div className="flex items-center px-5 py-3 border-b" style={{background:T.card, borderColor:T.bord25}}>
+                  {/* chevron spacer */}
+                  <span style={{width:28, flexShrink:0}}/>
                   {[
-                    {label:'Division',    w:90},
                     {label:'Trade',       flex:true},
                     {label:'Company',     flex:true},
                     {label:'Date Run',    w:120},
-                    {label:'Status',      hug:true},
-                    {label:'Bid Captain', w:200},
+                    {label:'Status',      w:140},
+                    {label:'Bid Captain', w:220},
                   ].map(h => (
                     <span key={h.label}
                       style={{fontSize:13, fontWeight:700, color:T.text,
-                        flex:   h.flex ? '1 1 0' : (h.hug ? '0 0 auto' : 'none'),
-                        width:  h.w || 'auto',
-                        minWidth: h.w || (h.hug ? 0 : 'auto'),
-                        paddingRight: h.hug ? 20 : 0,
+                        flex: h.flex ? '1 1 0' : 'none',
+                        width: h.w || 'auto', minWidth: h.w || 'auto',
                       }}>
                       {h.label}
                     </span>
                   ))}
                 </div>
 
-                {/* Rows */}
-                {BIDS.filter(b => {
-                  const st = bidStatuses[b.id];
-                  if (bidFilter === 'Active')  return ['New','In Progress','Submitted'].includes(st);
-                  if (bidFilter === 'Recent')  return ['Won','No Bid'].includes(st);
-                  return true;
-                }).map(b => (
-                  <div key={b.id} className="trow flex items-center px-5 py-4 border-b"
-                    style={{borderColor:T.border, background:T.page}}>
-                    {/* Division */}
-                    <span style={{width:90, minWidth:90, flexShrink:0, fontSize:13, fontWeight:600, color:T.muted}}>
-                      Div. {b.div}
-                    </span>
-                    {/* Trade */}
-                    <span className="flex-1 truncate" style={{fontSize:15, fontWeight:600, color:T.text, paddingRight:16}}>
-                      {b.trade}
-                    </span>
-                    {/* Company */}
-                    <span className="flex-1 truncate" style={{fontSize:14, color:T.sub, paddingRight:16}}>{b.company}</span>
-                    {/* Date Run */}
-                    <span style={{width:120, minWidth:120, flexShrink:0, fontSize:14, color:T.sub}}>{b.dateRun}</span>
-                    {/* Status — hug width: chip sizes to content only */}
-                    <span style={{flexShrink:0, paddingRight:20}}>
-                      <select
-                        value={bidStatuses[b.id]}
-                        onChange={e => setBidStatuses(s => ({...s, [b.id]: e.target.value}))}
-                        style={{
-                          fontSize:12, fontWeight:600, textAlign:'center',
-                          padding:'3px 8px', borderRadius:20, border:'none',
-                          cursor:'pointer', outline:'none', appearance:'none',
-                          width:'auto', display:'inline-block',
-                          background: BID_STATUS_STYLE[bidStatuses[b.id]]?.bg,
-                          color:      BID_STATUS_STYLE[bidStatuses[b.id]]?.color,
-                        }}>
-                        {BID_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </span>
-                    <div style={{width:200, minWidth:200}}>
-                      {bidCaptains[b.id] ? (
-                        <div className="flex items-center gap-2">
-                          <div style={{
-                            width:28, height:28, borderRadius:'50%', background:T.brand,
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            fontSize:11, fontWeight:700, color:'#fff', flexShrink:0,
-                          }}>
-                            {bidCaptains[b.id].split(' ').map(w=>w[0]).join('')}
+                {/* Division groups */}
+                {divNums.map(divNum => {
+                  const divBids = BIDS.filter(b => {
+                    if (b.div !== divNum) return false;
+                    const st = bidStatuses[b.id];
+                    if (bidFilter === 'Active') return ['New','In Progress','Submitted'].includes(st);
+                    if (bidFilter === 'Recent') return ['Won','No Bid'].includes(st);
+                    return true;
+                  });
+                  if (divBids.length === 0) return null;
+                  const isOpen = expandedBidDivs[divNum] !== false; // default open
+                  return (
+                    <div key={divNum}>
+                      {/* Division header row */}
+                      <div
+                        className="flex items-center px-5 py-3 cursor-pointer border-b"
+                        style={{background: isDark ? '#2a2938' : '#f7f7f9', borderColor:T.bord25}}
+                        onClick={() => setExpandedBidDivs(s => ({...s, [divNum]: !isOpen}))}
+                      >
+                        {/* Chevron */}
+                        <span style={{width:28, flexShrink:0, display:'flex', alignItems:'center', color:T.muted}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                            style={{transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition:'transform 0.2s'}}>
+                            <polyline points="9 18 15 12 9 6"/>
+                          </svg>
+                        </span>
+                        <span style={{fontSize:13, fontWeight:700, color:T.brand, marginRight:10}}>
+                          Div. {divNum}
+                        </span>
+                        <span style={{fontSize:14, fontWeight:600, color:T.text, flex:1}}>
+                          {getDivName(divNum)}
+                        </span>
+                        <span style={{fontSize:13, color:T.muted}}>
+                          {divBids.length} bid{divBids.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      {/* Child bid rows */}
+                      {isOpen && divBids.map(b => (
+                        <div key={b.id} className="trow flex items-center px-5 py-4 border-b"
+                          style={{borderColor:T.border, background:T.page}}>
+                          {/* indent spacer */}
+                          <span style={{width:28, flexShrink:0}}/>
+                          {/* Trade */}
+                          <span className="flex-1 truncate" style={{fontSize:14, fontWeight:600, color:T.text, paddingRight:16}}>
+                            {b.trade}
+                          </span>
+                          {/* Company */}
+                          <span className="flex-1 truncate" style={{fontSize:14, color:T.sub, paddingRight:16}}>{b.company}</span>
+                          {/* Date Run */}
+                          <span style={{width:120, minWidth:120, flexShrink:0, fontSize:14, color:T.sub}}>{b.dateRun}</span>
+                          {/* Status */}
+                          <span style={{width:140, minWidth:140, flexShrink:0}}>
+                            <select
+                              value={bidStatuses[b.id]}
+                              onChange={e => setBidStatuses(s => ({...s, [b.id]: e.target.value}))}
+                              style={{
+                                fontSize:12, fontWeight:600, textAlign:'center',
+                                padding:'3px 8px', borderRadius:20, border:'none',
+                                cursor:'pointer', outline:'none', appearance:'none',
+                                background: BID_STATUS_STYLE[bidStatuses[b.id]]?.bg,
+                                color:      BID_STATUS_STYLE[bidStatuses[b.id]]?.color,
+                              }}>
+                              {BID_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          </span>
+                          {/* Bid Captain */}
+                          <div style={{width:220, minWidth:220}}>
+                            {bidCaptains[b.id] ? (
+                              <div className="flex items-center gap-2">
+                                <div style={{
+                                  width:28, height:28, borderRadius:'50%', background:T.brand,
+                                  display:'flex', alignItems:'center', justifyContent:'center',
+                                  fontSize:11, fontWeight:700, color:'#fff', flexShrink:0,
+                                }}>
+                                  {bidCaptains[b.id].split(' ').map(w=>w[0]).join('')}
+                                </div>
+                                <span style={{fontSize:14, color:T.text}}>{bidCaptains[b.id]}</span>
+                                <button
+                                  onClick={() => setBidCaptains(c => ({...c, [b.id]:''}))}
+                                  style={{marginLeft:'auto', fontSize:11, color:T.sub, background:'none', border:'none', cursor:'pointer', opacity:0.6}}>
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <input
+                                placeholder="Assign captain…"
+                                defaultValue=""
+                                onBlur={e => { const v=e.target.value.trim(); if(v) setBidCaptains(c=>({...c,[b.id]:v})); }}
+                                onKeyDown={e => { if(e.key==='Enter'){const v=e.target.value.trim();if(v)setBidCaptains(c=>({...c,[b.id]:v}));} }}
+                                style={{
+                                  fontSize:14, color:T.text,
+                                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
+                                  border:`1px solid ${T.bord25}`, borderRadius:6,
+                                  padding:'5px 10px', outline:'none', width:'100%',
+                                }}
+                              />
+                            )}
                           </div>
-                          <span style={{fontSize:14, color:T.text}}>{bidCaptains[b.id]}</span>
-                          <button
-                            onClick={() => setBidCaptains(c => ({...c, [b.id]:''}))}
-                            style={{marginLeft:'auto', fontSize:11, color:T.sub, background:'none', border:'none', cursor:'pointer', opacity:0.6}}>
-                            ✕
-                          </button>
                         </div>
-                      ) : (
-                        <input
-                          placeholder="Assign captain…"
-                          defaultValue=""
-                          onBlur={e => {
-                            const v = e.target.value.trim();
-                            if (v) setBidCaptains(c => ({...c, [b.id]: v}));
-                          }}
-                          onKeyDown={e => {
-                            if (e.key==='Enter') {
-                              const v = e.target.value.trim();
-                              if (v) setBidCaptains(c => ({...c, [b.id]: v}));
-                            }
-                          }}
-                          style={{
-                            fontSize:14, color:T.text,
-                            background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
-                            border:`1px solid ${T.bord25}`, borderRadius:6,
-                            padding:'5px 10px', outline:'none', width:'100%',
-                          }}
-                        />
-                      )}
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Legend */}
@@ -1387,7 +1423,8 @@
                 ))}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* ── LABOR RATES ── */}
           {tab === 'Labor Rates' && (
@@ -1650,16 +1687,58 @@
       const { isDark } = useContext(ThemeCtx);
       const T = isDark ? D : C;
       const [tab, setTab] = useState('Overview');
+      const [expandedCostDivs, setExpandedCostDivs] = useState({});
       const [expandAll, setExpandAll] = useState(false);
 
       const COST_CODES = [
-        {div:'Div 03',code:'03 30 00',desc:'Cast-in-place Concrete',       qty:'1,200 CY',  cost:'$185.00', total:'$222,000'},
-        {div:'Div 07',code:'07 21 13',desc:'Board Insulation',             qty:'18,000 SF', cost:'$3.20',   total:'$57,600'},
-        {div:'Div 08',code:'08 11 13',desc:'Hollow Metal Doors & Frames',  qty:'42 EA',     cost:'$820.00', total:'$34,440'},
-        {div:'Div 09',code:'09 29 00',desc:'Gypsum Board',                 qty:'62,000 SF', cost:'$2.45',   total:'$151,900'},
-        {div:'Div 22',code:'22 11 00',desc:'Facility Water Distribution',  qty:'1 LS',      cost:'$95,000', total:'$95,000'},
-        {div:'Div 23',code:'23 05 00',desc:'HVAC Systems',                 qty:'1 LS',      cost:'$420,000',total:'$420,000'},
-        {div:'Div 26',code:'26 05 00',desc:'Common Work – Electrical',     qty:'1 LS',      cost:'$380,000',total:'$380,000'},
+        { div:'03', divLabel:'Div 03 – Concrete', items:[
+          {code:'03 11 00',desc:'Concrete Forming and Accessories',  qty:'18,400 SF',  cost:'$4.20',    total:'$77,280'},
+          {code:'03 20 00',desc:'Concrete Reinforcing',              qty:'48 Tons',    cost:'$1,240.00',total:'$59,520'},
+          {code:'03 30 00',desc:'Cast-in-Place Concrete',            qty:'1,200 CY',   cost:'$185.00',  total:'$222,000'},
+          {code:'03 39 00',desc:'Concrete Curing',                   qty:'1,200 CY',   cost:'$3.50',    total:'$4,200'},
+        ]},
+        { div:'05', divLabel:'Div 05 – Metals', items:[
+          {code:'05 12 00',desc:'Structural Steel Framing',          qty:'185 Tons',   cost:'$3,800.00',total:'$703,000'},
+          {code:'05 21 00',desc:'Steel Joist Framing',               qty:'62,000 SF',  cost:'$4.10',    total:'$254,200'},
+          {code:'05 31 00',desc:'Steel Decking',                     qty:'62,000 SF',  cost:'$3.60',    total:'$223,200'},
+          {code:'05 50 00',desc:'Metal Fabrications',                qty:'1 LS',       cost:'$28,000',  total:'$28,000'},
+        ]},
+        { div:'07', divLabel:'Div 07 – Thermal and Moisture Protection', items:[
+          {code:'07 13 00',desc:'Sheet Waterproofing',               qty:'8,400 SF',   cost:'$5.80',    total:'$48,720'},
+          {code:'07 21 13',desc:'Board Insulation',                  qty:'18,000 SF',  cost:'$3.20',    total:'$57,600'},
+          {code:'07 54 00',desc:'Thermoplastic Membrane Roofing',    qty:'14,000 SF',  cost:'$12.40',   total:'$173,600'},
+          {code:'07 92 00',desc:'Joint Sealants',                    qty:'1 LS',       cost:'$18,500',  total:'$18,500'},
+        ]},
+        { div:'08', divLabel:'Div 08 – Openings', items:[
+          {code:'08 11 13',desc:'Hollow Metal Doors and Frames',     qty:'42 EA',      cost:'$820.00',  total:'$34,440'},
+          {code:'08 41 13',desc:'Aluminum-Framed Storefronts',       qty:'1,800 SF',   cost:'$58.00',   total:'$104,400'},
+          {code:'08 51 13',desc:'Aluminum Windows',                  qty:'620 SF',     cost:'$42.00',   total:'$26,040'},
+          {code:'08 71 00',desc:'Door Hardware',                     qty:'42 EA',      cost:'$380.00',  total:'$15,960'},
+        ]},
+        { div:'09', divLabel:'Div 09 – Finishes', items:[
+          {code:'09 21 16',desc:'Gypsum Board Assemblies',           qty:'62,000 SF',  cost:'$2.45',    total:'$151,900'},
+          {code:'09 51 13',desc:'Acoustical Tile Ceilings',          qty:'28,000 SF',  cost:'$3.80',    total:'$106,400'},
+          {code:'09 65 13',desc:'Resilient Base and Accessories',    qty:'4,200 LF',   cost:'$3.10',    total:'$13,020'},
+          {code:'09 91 00',desc:'Painting and Coating',              qty:'88,000 SF',  cost:'$1.85',    total:'$162,800'},
+        ]},
+        { div:'22', divLabel:'Div 22 – Plumbing', items:[
+          {code:'22 11 00',desc:'Facility Water Distribution',       qty:'1 LS',       cost:'$95,000',  total:'$95,000'},
+          {code:'22 13 00',desc:'Facility Sanitary Sewerage',        qty:'1 LS',       cost:'$62,000',  total:'$62,000'},
+          {code:'22 40 00',desc:'Plumbing Fixtures',                 qty:'84 EA',      cost:'$1,240.00',total:'$104,160'},
+          {code:'22 67 00',desc:'Swimming Pool Plumbing Systems',    qty:'1 LS',       cost:'$185,000', total:'$185,000'},
+        ]},
+        { div:'23', divLabel:'Div 23 – HVAC', items:[
+          {code:'23 05 00',desc:'Common Work Results for HVAC',      qty:'1 LS',       cost:'$48,000',  total:'$48,000'},
+          {code:'23 07 00',desc:'HVAC Insulation',                   qty:'1 LS',       cost:'$36,500',  total:'$36,500'},
+          {code:'23 31 00',desc:'HVAC Ducts and Casings',            qty:'1 LS',       cost:'$124,000', total:'$124,000'},
+          {code:'23 74 00',desc:'Packaged Outdoor HVAC Equipment',   qty:'8 EA',       cost:'$26,400',  total:'$211,200'},
+        ]},
+        { div:'26', divLabel:'Div 26 – Electrical', items:[
+          {code:'26 05 00',desc:'Common Work Results for Electrical', qty:'1 LS',      cost:'$42,000',  total:'$42,000'},
+          {code:'26 20 00',desc:'Low-Voltage Electrical Transmission',qty:'1 LS',      cost:'$98,000',  total:'$98,000'},
+          {code:'26 51 00',desc:'Interior Lighting',                  qty:'1 LS',      cost:'$145,000', total:'$145,000'},
+          {code:'26 56 00',desc:'Exterior Lighting',                  qty:'1 LS',      cost:'$68,000',  total:'$68,000'},
+        ]},
       ];
 
       const KEY_HIGHLIGHTS = [
@@ -1752,35 +1831,68 @@
                 <h3 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Cost Codes</h3>
               </div>
               <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
-                <div className="flex gap-4 px-4 py-3 border-b" style={{background:T.card, borderColor:T.border}}>
-                  {['Division','Code','Description','Qty','Unit Cost','Total',''].map((h,i) => (
-                    <span key={i} className={i===2 ? 'flex-1' : 'w-[110px]'}
-                      style={{fontSize:13, fontWeight:700, color:T.text}}>{h}</span>
+                {/* Column headers */}
+                <div className="flex items-center gap-4 px-4 py-3 border-b" style={{background:T.card, borderColor:T.border}}>
+                  <span style={{width:28, flexShrink:0}}/>
+                  {[{l:'Code',w:110},{l:'Description',flex:true},{l:'Qty',w:110},{l:'Unit Cost',w:110},{l:'Total',w:120}].map(h=>(
+                    <span key={h.l} style={{fontSize:13, fontWeight:700, color:T.text,
+                      flex:h.flex?'1 1 0':'none', width:h.w||'auto', minWidth:h.w||'auto'}}>{h.l}</span>
                   ))}
                 </div>
-                {COST_CODES.map((r,i) => (
-                  <div key={i} className="trow flex gap-4 items-center px-4 py-3 border-b" style={{borderColor:T.border, background:T.page}}>
-                    <span style={{width:110, fontSize:14, fontWeight:600, color:T.brand}}>{r.div}</span>
-                    <span style={{width:110, fontSize:13, fontFamily:'monospace', color:T.sub}}>{r.code}</span>
-                    <span className="flex-1" style={{fontSize:15, color:T.text}}>{r.desc}</span>
-                    <span style={{width:110, fontSize:15, color:T.sub}}>{r.qty}</span>
-                    <span style={{width:110, fontSize:15, color:T.sub}}>{r.cost}</span>
-                    <span style={{width:110, fontSize:15, fontWeight:600, color:T.text}}>{r.total}</span>
-                    <div style={{width:30}}>
-                      <button style={{opacity:0.4, background:'none', border:'none', cursor:'pointer', color:T.text}} title="Copy">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                        </svg>
-                      </button>
+
+                {/* Division accordion rows */}
+                {COST_CODES.map(div => {
+                  const isOpen = expandedCostDivs[div.div] !== false; // default open
+                  const divTotal = div.items.reduce((acc,item) => {
+                    const n = parseFloat(item.total.replace(/[$,]/g,'')) || 0;
+                    return acc + n;
+                  }, 0);
+                  const fmt = n => '$' + n.toLocaleString();
+                  return (
+                    <div key={div.div}>
+                      {/* Division header row */}
+                      <div
+                        className="flex items-center gap-4 px-4 py-3 cursor-pointer border-b"
+                        style={{background: isDark ? '#2a2938' : '#f7f7f9', borderColor:T.bord25}}
+                        onClick={() => setExpandedCostDivs(s => ({...s, [div.div]: !isOpen}))}
+                      >
+                        <span style={{width:28, flexShrink:0, display:'flex', alignItems:'center', color:T.muted}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                            style={{transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition:'transform 0.2s'}}>
+                            <polyline points="9 18 15 12 9 6"/>
+                          </svg>
+                        </span>
+                        <span style={{width:110, flexShrink:0}}/>
+                        <span className="flex-1" style={{fontSize:14, fontWeight:700, color:T.text}}>{div.divLabel}</span>
+                        <span style={{width:110, flexShrink:0}}/>
+                        <span style={{width:110, flexShrink:0}}/>
+                        <span style={{width:120, flexShrink:0, fontSize:14, fontWeight:700, color:T.brand}}>{fmt(divTotal)}</span>
+                      </div>
+
+                      {/* Subcategory rows */}
+                      {isOpen && div.items.map((item, i) => (
+                        <div key={i} className="trow flex items-center gap-4 px-4 py-3 border-b"
+                          style={{borderColor:T.border, background:T.page}}>
+                          <span style={{width:28, flexShrink:0}}/>
+                          <span style={{width:110, flexShrink:0, fontSize:13, fontFamily:'monospace', color:T.sub}}>{item.code}</span>
+                          <span className="flex-1" style={{fontSize:14, color:T.text}}>{item.desc}</span>
+                          <span style={{width:110, flexShrink:0, fontSize:14, color:T.sub}}>{item.qty}</span>
+                          <span style={{width:110, flexShrink:0, fontSize:14, color:T.sub}}>{item.cost}</span>
+                          <span style={{width:120, flexShrink:0, fontSize:14, fontWeight:600, color:T.text}}>{item.total}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-                <div className="flex gap-4 items-center px-4 py-4 border-t" style={{background:T.card, borderColor:T.border}}>
-                  <span style={{width:110}}/><span style={{width:110}}/>
+                  );
+                })}
+
+                {/* Grand total footer */}
+                <div className="flex items-center gap-4 px-4 py-4 border-t" style={{background:T.card, borderColor:T.border}}>
+                  <span style={{width:28, flexShrink:0}}/>
+                  <span style={{width:110, flexShrink:0}}/>
                   <span className="flex-1" style={{fontWeight:700, fontSize:15, color:T.text}}>Total</span>
-                  <span style={{width:110}}/><span style={{width:110}}/>
-                  <span style={{width:110, fontWeight:700, fontSize:16, color:T.brand}}>$8,493,560</span>
-                  <span style={{width:30}}/>
+                  <span style={{width:110, flexShrink:0}}/>
+                  <span style={{width:110, flexShrink:0}}/>
+                  <span style={{width:120, flexShrink:0, fontWeight:700, fontSize:16, color:T.brand}}>$8,493,560</span>
                 </div>
               </div>
 
