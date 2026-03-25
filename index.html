@@ -1131,7 +1131,7 @@
 
       // Labor rates state
       const [laborRows, setLaborRows]   = useState(LABOR_TRADES_DEFAULT);
-      const [laborFile, setLaborFile]   = useState('labor_rates_Q4_2025.xlsx');
+      const [laborFile, setLaborFile]   = useState(null);
       const [laborSaved, setLaborSaved] = useState(false);
       const [laborDragging, setLaborDragging] = useState(false);
 
@@ -1413,7 +1413,57 @@
           {tab === 'Labor Rates' && (
             <div className="px-[80px] py-8 flex flex-col gap-6">
 
-              {/* Source file card */}
+              {/* ── EMPTY STATE ── */}
+              {!laborFile && (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <h2 style={{fontSize:16, fontWeight:700, color:T.text, margin:'0 0 6px'}}>Labor Rates</h2>
+                    <p style={{fontSize:14, color:T.sub, margin:0, lineHeight:'22px'}}>
+                      Upload or enter your pricing data here to get even more accurate estimates from BuildCrew.AI.
+                    </p>
+                  </div>
+                  <div
+                    onClick={() => setLaborFile('labor_rates_Q4_2025.xlsx')}
+                    onMouseEnter={() => setLaborDragging(true)}
+                    onMouseLeave={() => setLaborDragging(false)}
+                    style={{
+                      marginTop:8,
+                      border:`2px dashed ${laborDragging ? T.brand : T.bord25}`,
+                      borderRadius:12,
+                      padding:'64px 32px',
+                      display:'flex', flexDirection:'column',
+                      alignItems:'center', justifyContent:'center',
+                      gap:16, cursor:'pointer',
+                      background: laborDragging
+                        ? (isDark ? 'rgba(232,70,0,0.05)' : 'rgba(232,70,0,0.03)')
+                        : 'transparent',
+                      transition:'border-color 0.15s, background 0.15s',
+                    }}>
+                    <div style={{
+                      width:52, height:52, borderRadius:12, flexShrink:0,
+                      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={laborDragging ? T.brand : T.muted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.15s'}}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                    </div>
+                    <div style={{textAlign:'center'}}>
+                      <div style={{fontSize:15, fontWeight:600, color: laborDragging ? T.brand : T.text, transition:'color 0.15s'}}>
+                        Click to upload your labor rates file
+                      </div>
+                      <div style={{fontSize:13, color:T.muted, marginTop:5}}>
+                        XLSX, CSV, or PDF · Up to 25 MB
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── UPLOADED STATE ── */}
+              {laborFile && <>{/* Source file card */}
               <div className="rounded-[10px] border p-5" style={{background:T.card, borderColor:T.bord25}}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -1559,6 +1609,7 @@
                   </span>
                 </div>
               </div>
+            </>}
             </div>
           )}
         </div>
