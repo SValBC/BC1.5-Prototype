@@ -1312,7 +1312,7 @@
               <div className="rounded-[8px] border overflow-hidden" style={{borderColor:T.bord25}}>
                 <div className="flex gap-4 px-6 py-3 border-b" style={{background: T.card, borderColor: T.border}}>
                   {['File Name','Type','Pages','Size','Date'].map((h,i) => (
-                    <span key={h} className={i===0 ? 'flex-1' : 'w-[100px]'}
+                    <span key={h} className={i===0 ? 'flex-1' : i===1 ? 'w-[200px]' : 'w-[100px]'}
                       style={{fontSize:15, fontWeight:400, color:T.text}}>{h}</span>
                   ))}
                 </div>
@@ -1330,7 +1330,7 @@
                   return filtered.map((f) => (
                     <div key={f.idx} className="trow flex gap-4 px-6 py-3 border-b items-center" style={{borderColor:T.border, background: T.page}}>
                       <span className="flex-1 truncate" style={{fontSize:15, color:T.text}}>{f.name}</span>
-                      <div style={{width:100}}>
+                      <div style={{width:200, minWidth:200}}>
                         <select
                           value={fileTypesMap[f.idx]}
                           onChange={e => setFileTypesMap(m => ({...m, [f.idx]: e.target.value}))}
