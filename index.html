@@ -2046,7 +2046,7 @@
           ]}/>
 
           {/* Title */}
-          <div style={{padding:'32px 32px 24px 32px'}}>
+          <div style={{padding:'32px 80px 24px 32px'}}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <button onClick={() => navigate('projectHome')} className="flex items-center justify-center rounded-full"
@@ -2057,6 +2057,10 @@
               </div>
               <div className="flex items-center gap-4">
                 <Btn variant="secondary">Re-run</Btn>
+                <button className="btn-base btn-secondary flex items-center justify-center rounded-[8px] cursor-pointer"
+                  style={{width:36,padding:0,background:T.card,color:T.text,border:`1px solid ${T.bord25}`}}>
+                  {Icon.download}
+                </button>
               </div>
             </div>
             <p style={{paddingLeft:48, fontSize:16, color:T.sub, margin:0, lineHeight:'24px', maxWidth:'85%'}}>
