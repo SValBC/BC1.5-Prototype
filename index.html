@@ -61,15 +61,8 @@
     /* Button base — shared transition + min-height */
     .btn-base { transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; min-height: 38px; }
 
-    /* Tab hover — sliding orange indicator */
+    /* Tab buttons */
     .tab-btn { background: none; border: none; cursor: pointer; padding: 0; }
-    .tab-indicator {
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .tab-indicator.active { transform: scaleX(1); }
-    .tab-btn:hover .tab-indicator { transform: scaleX(1); }
 
     /* Primary button hover */
     .btn-primary:hover { background: #BA3800 !important; }
@@ -394,25 +387,37 @@
       const { isDark } = useContext(ThemeCtx);
       const T = isDark ? D : C;
       const [hovered, setHovered] = React.useState(null);
+      const tabRefs = React.useRef({});
+      const [ind, setInd] = React.useState({ left: 0, width: 0, ready: false });
+
+      const moveTo = React.useCallback((label) => {
+        const el = tabRefs.current[label];
+        if (el) setInd({ left: el.offsetLeft, width: el.offsetWidth, ready: true });
+      }, []);
+
+      React.useEffect(() => { moveTo(hovered || active); }, [hovered, active]);
+      React.useEffect(() => { requestAnimationFrame(() => moveTo(active)); }, []);
+
       return (
-        <div className="flex gap-6 border-b" style={{borderColor: T.border}}>
-          {tabs.map(t => {
-            const isActive = t === active;
-            const isHovered = hovered === t;
-            return (
-              <button key={t} onClick={() => onChange(t)}
-                onMouseEnter={() => setHovered(t)}
-                onMouseLeave={() => setHovered(null)}
-                className="tab-btn flex flex-col items-start" style={{gap:16}}>
-                <span style={{
-                  fontSize:16, fontWeight:600,
-                  color: isActive ? T.brand : T.text,
-                }}>{t}</span>
-                <div className={`tab-indicator${isActive ? ' active' : ''}`}
-                  style={{height:2, background: T.brand, width:'100%', marginBottom:-1, borderRadius:1}} />
-              </button>
-            );
-          })}
+        <div className="relative flex gap-6 border-b" style={{borderColor: T.border}}>
+          {tabs.map(t => (
+            <button key={t}
+              ref={el => { tabRefs.current[t] = el; }}
+              onClick={() => onChange(t)}
+              onMouseEnter={() => setHovered(t)}
+              onMouseLeave={() => setHovered(null)}
+              className="tab-btn flex flex-col items-start" style={{gap:16}}>
+              <span style={{fontSize:16, fontWeight:600, color: t === active ? T.brand : T.text}}>{t}</span>
+              <div style={{height:2}} />
+            </button>
+          ))}
+          {/* Single sliding indicator */}
+          <div style={{
+            position:'absolute', bottom:-1, height:2, borderRadius:1,
+            background: T.brand, pointerEvents:'none',
+            left: ind.left, width: ind.width,
+            transition: ind.ready ? 'left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.22s cubic-bezier(0.4,0,0.2,1)' : 'none',
+          }} />
         </div>
       );
     }
