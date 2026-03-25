@@ -1372,7 +1372,7 @@
                       <button
                         onClick={() => { setBidResultsFrom('projectHome'); navigate('bidResults'); }}
                         style={{
-                          fontSize:14, fontWeight:600, color:T.link,
+                          fontSize:15, fontWeight:600, color:T.link,
                           background:'none', border:'none', cursor:'pointer', padding:0,
                           textDecoration:'underline', textUnderlineOffset:3,
                         }}>
@@ -1384,7 +1384,7 @@
                       {(() => {
                         const { formatted, relative } = formatBidDate(b.dateRun);
                         return <>
-                          <span style={{fontSize:14, color:T.sub, whiteSpace:'nowrap'}}>{relative || formatted}</span>
+                          <span style={{fontSize:15, color:T.sub, whiteSpace:'nowrap'}}>{relative || formatted}</span>
                         </>;
                       })()}
                     </span>
@@ -1395,7 +1395,7 @@
                         onChange={e => setBidCaptains(c => ({...c, [b.id]: e.target.value}))}
                         placeholder="Unassigned"
                         style={{
-                          fontSize:14, color:T.text,
+                          fontSize:15, color:T.text,
                           background: isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5',
                           border:`1px solid ${T.bord25}`, borderRadius:6,
                           padding:'5px 10px', outline:'none', width:'100%',
