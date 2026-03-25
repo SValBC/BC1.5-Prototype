@@ -407,7 +407,11 @@
               onMouseEnter={() => setHovered(t)}
               onMouseLeave={() => setHovered(null)}
               className="tab-btn flex flex-col items-start" style={{gap:16}}>
-              <span style={{fontSize:16, fontWeight:600, color: t === active ? T.brand : T.text}}>{t}</span>
+              <span style={{
+                fontSize:16, fontWeight:600,
+                color: t === active ? T.brand : hovered === t ? '#A7A7A7' : T.text,
+                transition: 'color 0.18s ease',
+              }}>{t}</span>
               <div style={{height:2}} />
             </button>
           ))}
