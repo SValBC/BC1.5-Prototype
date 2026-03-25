@@ -1287,6 +1287,10 @@
 
           {tab === 'Files & Documents' && (
             <div className="px-[80px] py-8 flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <h2 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Files &amp; Documents</h2>
+                <span style={{fontSize:14, color:T.sub}}>The home base for all of your project files. Upload drawings, specs, bid forms and any other relevant documentation for your project.</span>
+              </div>
               {/* Filter row — floating above table */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2" style={{background: isDark ? '#2e2d39' : '#f0f0f0', borderRadius:8, padding:'4px 6px'}}>
@@ -1355,7 +1359,11 @@
               return mf ? mf.name : num;
             };
             return (
-            <div className="px-[80px] py-8">
+            <div className="px-[80px] py-8 flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <h2 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Bid Tracker</h2>
+                <span style={{fontSize:14, color:T.sub}}>Revisit results from every run of the Bid Leveling Analyst.</span>
+              </div>
               <div className="rounded-[10px] border overflow-hidden" style={{borderColor:T.bord25}}>
                 {/* Column headers */}
                 <div className="flex items-center px-5 py-3 border-b" style={{background:T.card, borderColor:T.bord25}}>
@@ -1416,11 +1424,9 @@
               {/* ── EMPTY STATE ── */}
               {!laborFile && (
                 <div className="flex flex-col gap-3">
-                  <div>
-                    <h2 style={{fontSize:16, fontWeight:700, color:T.text, margin:'0 0 6px'}}>Labor Rates</h2>
-                    <p style={{fontSize:14, color:T.sub, margin:0, lineHeight:'22px'}}>
-                      Upload or enter your pricing data here to get even more accurate estimates from BuildCrew.AI.
-                    </p>
+                  <div className="flex flex-col gap-1">
+                    <h2 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Labor Rates</h2>
+                    <span style={{fontSize:14, color:T.sub}}>Upload or enter your pricing data here to get even more accurate estimates from BuildCrew.AI.</span>
                   </div>
                   <div
                     onClick={() => setLaborFile('labor_rates_Q4_2025.xlsx')}
@@ -1463,7 +1469,12 @@
               )}
 
               {/* ── UPLOADED STATE ── */}
-              {laborFile && <>{/* Source file card */}
+              {laborFile && <>
+              <div className="flex flex-col gap-1">
+                <h2 style={{fontSize:18, fontWeight:700, color:T.text, margin:0}}>Labor Rates</h2>
+                <span style={{fontSize:14, color:T.sub}}>Upload or enter your pricing data here to get even more accurate estimates from BuildCrew.AI.</span>
+              </div>
+              {/* Source file card */}
               <div className="rounded-[10px] border p-5" style={{background:T.card, borderColor:T.bord25}}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
