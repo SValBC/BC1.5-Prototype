@@ -61,6 +61,16 @@
     /* Button base — shared transition + min-height */
     .btn-base { transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; min-height: 38px; }
 
+    /* Tab hover — sliding orange indicator */
+    .tab-btn { background: none; border: none; cursor: pointer; padding: 0; }
+    .tab-indicator {
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tab-indicator.active { transform: scaleX(1); }
+    .tab-btn:hover .tab-indicator { transform: scaleX(1); }
+
     /* Primary button hover */
     .btn-primary:hover { background: #BA3800 !important; }
 
@@ -383,15 +393,27 @@
     function Tabs({ tabs, active, onChange }) {
       const { isDark } = useContext(ThemeCtx);
       const T = isDark ? D : C;
+      const [hovered, setHovered] = React.useState(null);
       return (
         <div className="flex gap-6 border-b" style={{borderColor: T.border}}>
-          {tabs.map(t => (
-            <button key={t} onClick={() => onChange(t)} className="flex flex-col gap-4 items-start">
-              <span style={{color: t === active ? T.brand : T.text, fontSize:16, fontWeight:600}}>{t}</span>
-              <div style={{height:2, background: t === active ? T.brand : 'transparent',
-                width:'100%', marginBottom:-1, borderRadius:1}} />
-            </button>
-          ))}
+          {tabs.map(t => {
+            const isActive = t === active;
+            const isHovered = hovered === t;
+            return (
+              <button key={t} onClick={() => onChange(t)}
+                onMouseEnter={() => setHovered(t)}
+                onMouseLeave={() => setHovered(null)}
+                className="tab-btn flex flex-col items-start" style={{gap:16}}>
+                <span style={{
+                  fontSize:16, fontWeight:600,
+                  color: isActive || isHovered ? T.brand : T.text,
+                  transition:'color 0.18s ease',
+                }}>{t}</span>
+                <div className={`tab-indicator${isActive ? ' active' : ''}`}
+                  style={{height:2, background: T.brand, width:'100%', marginBottom:-1, borderRadius:1}} />
+              </button>
+            );
+          })}
         </div>
       );
     }
