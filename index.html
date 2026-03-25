@@ -406,8 +406,7 @@
                 className="tab-btn flex flex-col items-start" style={{gap:16}}>
                 <span style={{
                   fontSize:16, fontWeight:600,
-                  color: isActive || isHovered ? T.brand : T.text,
-                  transition:'color 0.18s ease',
+                  color: isActive ? T.brand : T.text,
                 }}>{t}</span>
                 <div className={`tab-indicator${isActive ? ' active' : ''}`}
                   style={{height:2, background: T.brand, width:'100%', marginBottom:-1, borderRadius:1}} />
