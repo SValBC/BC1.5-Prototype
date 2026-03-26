@@ -1733,6 +1733,86 @@
       );
     }
 
+    /* ──────────────────────────────────────────────────────────────────
+       SHARED: FILES ANALYZED TAB
+    ────────────────────────────────────────────────────────────────── */
+    const ROM_SESSION_FILES = [
+      { name:'Project Alpha – Full Drawing Set',        type:'Drawing',     pages:142, size:'24.7',  date:'Oct 12 2025' },
+      { name:'Division 03 – Concrete Specifications',   type:'Specs',       pages:38,  size:'4.1',   date:'Sep 28 2025' },
+      { name:'Division 22 – Plumbing Specifications',   type:'Specs',       pages:52,  size:'5.8',   date:'Sep 28 2025' },
+      { name:'Division 26 – Electrical Specifications', type:'Specs',       pages:61,  size:'6.2',   date:'Sep 28 2025' },
+      { name:'Geotech Investigation Report',            type:'Report',      pages:24,  size:'8.3',   date:'Aug 15 2025' },
+      { name:'bc_schedules and 2025.xlsx',              type:'Spreadsheet', pages:15,  size:'12.85', date:'Aug 11 2025' },
+    ];
+    const DQAA_SESSION_FILES = [
+      { name:'Mechanical Drawings – Levels 1–4',        type:'Drawing',     pages:56,  size:'18.2', date:'Oct 10 2025' },
+      { name:'Specification Section 22 00 00',           type:'Specs',       pages:44,  size:'5.1',  date:'Sep 28 2025' },
+      { name:'Specification Section 26 00 00',           type:'Specs',       pages:61,  size:'6.2',  date:'Sep 28 2025' },
+      { name:'Bid Package – Division 22 Plumbing',       type:'Bid Form',    pages:28,  size:'3.4',  date:'Oct 15 2025' },
+      { name:'RFI Log – Week 42',                        type:'Spreadsheet', pages:6,   size:'0.9',  date:'Oct 20 2025' },
+    ];
+
+    function FilesAnalyzedTab({ files, sessionDate }) {
+      const { isDark } = useContext(ThemeCtx);
+      const T = isDark ? D : C;
+      const typeStyle = type => ({
+        'Drawing':     { bg: isDark ? 'rgba(80,71,243,0.15)'  : 'rgba(80,71,243,0.09)',  color: T.link  },
+        'Specs':       { bg: isDark ? 'rgba(72,193,181,0.15)' : 'rgba(72,193,181,0.10)', color: T.teal  },
+        'Report':      { bg: isDark ? 'rgba(255,164,26,0.15)' : 'rgba(255,164,26,0.10)', color: '#FFA41A' },
+        'Spreadsheet': { bg: isDark ? 'rgba(74,222,128,0.12)' : 'rgba(74,222,128,0.10)', color: '#4ade80' },
+        'Bid Form':    { bg: isDark ? 'rgba(232,70,0,0.15)'   : 'rgba(232,70,0,0.09)',   color: T.brand },
+        'Export File': { bg: isDark ? 'rgba(255,255,255,0.08)': 'rgba(0,0,0,0.06)',       color: T.muted },
+      })[type] || { bg: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: T.muted };
+
+      const fileIcon = (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+      );
+      return (
+        <div style={{padding:'48px 80px 80px'}}>
+          {/* Session banner */}
+          <div className="flex items-center gap-3 mb-8 rounded-[10px] border px-5 py-4" style={{
+            borderColor: isDark ? 'rgba(80,71,243,0.3)' : 'rgba(80,71,243,0.2)',
+            background:  isDark ? 'rgba(80,71,243,0.08)' : 'rgba(80,71,243,0.04)',
+          }}>
+            <span style={{color:T.link, fontSize:15, lineHeight:1, flexShrink:0}}>✦</span>
+            <span style={{fontSize:14, fontWeight:700, color:T.link}}>Session</span>
+            <span style={{width:1, height:14, background: isDark ? 'rgba(80,71,243,0.35)' : 'rgba(80,71,243,0.25)', flexShrink:0}}/>
+            <span style={{fontSize:13, color:T.muted}}>{sessionDate}</span>
+            <span style={{width:1, height:14, background: isDark ? 'rgba(80,71,243,0.35)' : 'rgba(80,71,243,0.25)', flexShrink:0}}/>
+            <span style={{fontSize:13, color:T.muted}}>{files.length} file{files.length !== 1 ? 's' : ''} analyzed</span>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-[10px] border overflow-hidden" style={{borderColor:T.bord25}}>
+            <div className="flex gap-4 px-6 py-3 border-b" style={{background:T.card, borderColor:T.bord25}}>
+              {[['File Name','flex-1'],['Type','w-[160px]'],['Pages','w-[80px]'],['Size','w-[100px]'],['Date Added','w-[140px]']].map(([label,cls]) => (
+                <span key={label} className={cls} style={{fontSize:15, fontWeight:400, color:T.text}}>{label}</span>
+              ))}
+            </div>
+            {files.map((f, i) => {
+              const ts = typeStyle(f.type);
+              return (
+                <div key={i} className="trow flex gap-4 px-6 py-4 items-center border-b" style={{borderColor:T.border, background:T.page}}>
+                  <span className="flex-1 flex items-center gap-3 min-w-0">
+                    <span style={{color:T.muted, flexShrink:0}}>{fileIcon}</span>
+                    <span style={{fontSize:15, fontWeight:400, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{f.name}</span>
+                  </span>
+                  <span className="w-[160px]" style={{flexShrink:0}}>
+                    <span style={{fontSize:12, fontWeight:600, padding:'2px 8px', borderRadius:4, background:ts.bg, color:ts.color}}>{f.type}</span>
+                  </span>
+                  <span className="w-[80px]"  style={{fontSize:15, fontWeight:400, color:T.sub, flexShrink:0}}>{f.pages}</span>
+                  <span className="w-[100px]" style={{fontSize:15, fontWeight:400, color:T.sub, flexShrink:0}}>{f.size} MB</span>
+                  <span className="w-[140px]" style={{fontSize:15, fontWeight:400, color:T.sub, flexShrink:0}}>{f.date}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     function ROMScreen({ navigate }) {
       const { isDark } = useContext(ThemeCtx);
       const T = isDark ? D : C;
@@ -1831,7 +1911,7 @@
           </div>
 
           <div className="px-[80px]">
-            <Tabs tabs={['Overview','Breakdown by Division']} active={tab} onChange={setTab}/>
+            <Tabs tabs={['Overview','Breakdown by Division','Files Analyzed']} active={tab} onChange={setTab}/>
           </div>
 
           {/* ══ OVERVIEW ══ */}
@@ -1976,6 +2056,11 @@
             </div>
           )}
 
+          {/* ══ FILES ANALYZED ══ */}
+          {tab === 'Files Analyzed' && (
+            <FilesAnalyzedTab files={ROM_SESSION_FILES} sessionDate="Oct 22, 2025 · 2:47 PM" />
+          )}
+
         </div>
       );
     }
@@ -2070,7 +2155,7 @@
 
           {/* Tabs */}
           <div className="px-[80px]">
-            <Tabs tabs={['Overview','Detailed RFIs with Evidence']} active={tab} onChange={setTab}/>
+            <Tabs tabs={['Overview','Detailed RFIs with Evidence','Files Analyzed']} active={tab} onChange={setTab}/>
           </div>
 
           {/* ── TAB 1: OVERVIEW ── */}
@@ -2221,6 +2306,11 @@
                 );
               })}
             </div>
+          )}
+
+          {/* ══ FILES ANALYZED ══ */}
+          {tab === 'Files Analyzed' && (
+            <FilesAnalyzedTab files={DQAA_SESSION_FILES} sessionDate="Oct 20, 2025 · 11:14 AM" />
           )}
         </div>
       );
@@ -2622,7 +2712,7 @@
 
           {/* Tabs */}
           <div className="px-[80px]">
-            <Tabs tabs={['Overview','Bid Leveling Analysis','Detailed Analysis']} active={tab} onChange={setTab}/>
+            <Tabs tabs={['Overview','Bid Leveling Analysis','Detailed Analysis','Files Analyzed']} active={tab} onChange={setTab}/>
           </div>
 
           {/* ══ OVERVIEW ══ */}
@@ -2831,6 +2921,14 @@
               </div>
 
             </div>
+          )}
+
+          {/* ══ FILES ANALYZED ══ */}
+          {tab === 'Files Analyzed' && (
+            <FilesAnalyzedTab
+              files={BID_FILES.filter(f => !bidDivision || f.divs?.includes(bidDivision))}
+              sessionDate="Oct 21, 2025 · 9:32 AM"
+            />
           )}
 
         </div>
