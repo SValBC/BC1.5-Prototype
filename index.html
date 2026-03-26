@@ -678,7 +678,7 @@
 
       return (
         <div key={idx} style={{
-          minHeight:'100vh', display:'flex', flexDirection:'column',
+          height:'100vh', display:'flex', flexDirection:'column',
           alignItems:'center', justifyContent:'center',
           background: scene.bg, position:'relative', overflow:'hidden',
           animation:'sceneFade 0.45s ease',
@@ -998,7 +998,7 @@
         return () => clearTimeout(t);
       }, []);
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen fade-in" style={{background:C.nav}}>
+        <div className="flex flex-col items-center justify-center fade-in" style={{background:C.nav, height:'100vh'}}>
           <div className="text-center" style={{maxWidth:480, padding:'0 32px'}}>
             <div className="flex justify-center mb-8"><Logo /></div>
             <h2 style={{fontSize:28, fontWeight:700, color:'white', marginBottom:12}}>Setting Up Your Project</h2>
@@ -2539,7 +2539,7 @@
       }, []);
 
       return (
-        <div className="flex flex-col min-h-screen fade-in" style={{background: T.page}}>
+        <div className="flex flex-col fade-in" style={{background: T.page, height:'100vh', overflow:'auto'}}>
           <NavBar navigate={navigate}/>
           <Crumbs items={[
             {label:'Projects'},
